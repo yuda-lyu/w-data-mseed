@@ -1,0 +1,30 @@
+{
+  "name": "w-data-mseed",
+  "version": "1.0.0",
+  "main": "dist/w-data-mseed.umd.js",
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "wsemi": "^1.6.61"
+  },
+  "devDependencies": {
+    "w-package-tools": "^1.0.65"
+  },
+  "scripts": {
+    "test": "mocha --parallel --timeout 60000 --experimental-modules --es-module-specifier-resolution=node",
+    "deploy": "gh-pages -d docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yuda-lyu/w-data-mseed.git"
+  },
+  "keywords": [
+    "package",
+    "tool",
+    "miniSEED",
+    "mseed",
+    "windows",
+    "nodejs"
+  ],
+  "author": "yuda-lyu(semisphere)",
+  "license": "MIT"
+}

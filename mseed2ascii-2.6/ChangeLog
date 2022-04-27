@@ -1,0 +1,90 @@
+2019.155: 2.6
+	- Add -E option to insert extra headers into GeoCSV.
+
+2019.120: 2.5
+	- Fix detection of inclination/dip convention and documentation.
+	- Update fdzipstream source to 2.2.
+
+2018.241: 2.4
+	- Update libmseed to 2.19.6.
+
+2018.179:
+	- Buffer data before writing to output.  Major optimization for
+	writing to uncompressed ZIP archives.
+
+2018.081: 2.3
+	- Use SID (source identifier) as opposed to TSID in GeoCSV.
+	- Do not include "quality" code in SID in GeoCSV.
+	- Add 'Z' UTC designator to TSPAIR output for GeoCSV.
+
+2018.078:
+	- Correct spelling of "delimiter".
+
+2018.075:
+	- Include delimiter between time and sample value in GeoCSV.
+
+2018.074:
+	- Add -m and -M options to accept simple metadata, included in
+	GeoCSV output.
+	- Add -s option to scale (inversely) data by the scale factor in
+	supplied metadata, units from the metadata are reported in header.
+	- Use .csv instead of .txt for generated GeoCSV output file names.
+
+2018.073:
+	- Update libmseed to 2.19.5.
+	- Add -z and -z0 options to output ZIP archives.
+	- Add -G option to produce GeoCSV formatted output.
+
+2017.199: 2.2	
+	- Update libmseed to 2.19.4.
+	- Improve resolution of timestamps for TSPAIR output for non-integer
+	sample rates.
+	- Cleanup formatting, convert whitespaces to spaces.
+
+2017.093: 2.1
+	- Update libmseed to 2.19.3.
+	- Remove dependency on ntwin32.mak for Windows nmake makefiles, now
+	building works in plain MSVC development environments.
+	- Add DEPRECATED notice to Makefile.wat and src/Makefile.wat.
+	- Update licensing to GNU GPL 3.
+
+2013.279: 2.0
+	- Update libmseed to 2.12
+	- Add check of derived sample rate versus reported sample rate.
+	- Add -dr option to use the derived sample rate over the reported rate,
+	this assumes that the timing is more accurate than the sampling rate.
+	- Change generated output file names to (no colons or commas):
+	  Net.Sta.Loc.Chan.Qual.YYYY-MM-DDTHHMMSS.ssssss.txt
+	which is consistent between between various operating systems.
+	The previously generated file name patterns were:
+	  Net.Sta.Loc.Chan.Qual.YYYY-MM-DDTHH:MM:SS.txt (non-Windows)
+	  Net.Sta.Loc.Chan.Qual.YYYY-MM-DDTHH_MM_SS.txt (Windows)
+
+2011.231: 1.1
+	- Update libmseed to 2.6.1.
+	- Fix output to multiple files, thanks John West.
+
+2010.266: 1.0
+	- Update libmseed to 2.5.1.
+	- Mark as 1.0.
+
+2010.169: 0.5
+	- Change default columns for SLIST output to 1.
+	- Cleanup SLIST output to not include spaces at end of lines.
+
+2010.111: 0.4
+	- Add -o option to write all output to a single file, also to stdout.
+	- Add -u option to specify units string for output headers.
+	- Change default file output extension to ".txt".
+
+2009.328: 0.3
+	- Add -c option to specify the number of columns used for the sample value
+	list output format, default is 6.
+	- Include simple ASCII format documentation in the doc directory.
+
+2009.156: 0.2
+	- Replace colons (:) with underscores (_) in output file names
+	for Windows (Win32) hosts.
+
+2008.113: 0.1
+	- Initial version.
