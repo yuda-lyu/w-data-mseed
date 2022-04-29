@@ -161,14 +161,16 @@ async function WDataMseed(fp, opt = {}) {
             console.log('execProcess catch', err)
             errTemp = 'execProcess error'
         })
+        // .finally(() => {
+        // })
+
+    //chdir, 不論正常或錯誤皆需還原工作路徑
+    process.chdir(cwdOri)
 
     //check
     if (isestr(errTemp)) {
         return Promise.reject(errTemp)
     }
-
-    //chdir, recover
-    process.chdir(cwdOri)
 
     //fsTreeFolder
     let rs = fsTreeFolder(fdOut)
