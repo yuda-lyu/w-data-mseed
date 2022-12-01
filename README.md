@@ -9,7 +9,7 @@ A tool for miniSEED(mseed) data.
 [![jsdelivr download](https://img.shields.io/jsdelivr/npm/hm/w-data-mseed.svg)](https://www.jsdelivr.com/package/npm/w-data-mseed)
 
 ## Documentation
-To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-data-mseed/global.htm).
+To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-data-mseed/global.html).
 
 ## Core
 > `w-data-mseed` is basing on `mseed2ascii` of IRIS.
