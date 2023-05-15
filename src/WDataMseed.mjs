@@ -106,6 +106,7 @@ async function WDataMseed(fp, opt = {}) {
 
     //prog
     let prog = path.resolve(fdExe, 'mseed2ascii.exe')
+    prog = `"${prog}"` //用雙引號包住避免路徑有空格
     // console.log('prog', prog)
 
     //fdOut
