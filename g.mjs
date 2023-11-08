@@ -5,8 +5,8 @@ import WDataMseed from './src/WDataMseed.mjs'
 async function test() {
 
     //fp
-    let fp = './g.mseed'
-    // let fp = './20200917093752_RST01_acc.mseed'
+    // let fp = './g.mseed'
+    let fp = './20200917093752_RST01_acc.mseed'
 
     //WDataMseed
     let r = await WDataMseed(fp)
