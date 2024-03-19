@@ -1,9 +1,9 @@
 {
   "name": "w-data-mseed",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "main": "dist/w-data-mseed.umd.js",
   "dependencies": {
-    "lodash": "^4.17.21",
+    "lodash-es": "^4.17.21",
     "wsemi": "^1.7.47"
   },
   "devDependencies": {

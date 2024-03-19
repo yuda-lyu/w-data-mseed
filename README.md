@@ -17,7 +17,7 @@ To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-
 
 ## Installation
 ### Using npm(ES6 module):
-> **Note:** `w-data-mseed` is mainly dependent on `lodash` and `wsemi`, and should run in `Windows`.
+> **Note:** `w-data-mseed` is mainly dependent on `lodash-es` and `wsemi`, and should run in `Windows`.
 
 ```alias
 npm i w-data-mseed
