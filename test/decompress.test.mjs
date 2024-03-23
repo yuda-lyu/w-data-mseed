@@ -1,7 +1,11 @@
 import assert from 'assert'
-import w from 'wsemi'
 import wds from '../src/WDataMseed.mjs'
 import rdp from './g.json' assert {type:'json'}
+
+
+function isWindows() {
+    return process.platform === 'win32'
+}
 
 
 describe('test', function() {
@@ -10,7 +14,7 @@ describe('test', function() {
         let rin = null
         let rout = null
 
-        if (w.isWindow()) {
+        if (isWindows()) {
 
             //rin
             rin = rdp
