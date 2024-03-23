@@ -1,15 +1,15 @@
 import fs from 'fs'
-import WDataMseed from './src/WDataMseed.mjs'
+import wds from './src/WDataMseed.mjs'
 
 
 async function test() {
 
     //fp
-    // let fp = './g.mseed'
-    let fp = './20200917093752_RST01_acc.mseed'
+    let fp = './test/g.mseed'
+    // let fp = './20200917093752_RST01_acc.mseed'
 
     //WDataMseed
-    let r = await WDataMseed(fp)
+    let r = await wds(fp)
     console.log(r)
     // [
     //   {
@@ -29,7 +29,7 @@ async function test() {
     //   }
     // ]
 
-    fs.writeFileSync('./g.json', JSON.stringify(r, null, 2), 'utf8')
+    fs.writeFileSync('./test/g.json', JSON.stringify(r, null, 2), 'utf8')
 
 }
 test()

@@ -1,10 +1,10 @@
 import path from 'path'
 import fs from 'fs'
 import process from 'process'
-import get from 'lodash-es/get'
-import map from 'lodash-es/map'
-import filter from 'lodash-es/filter'
-import drop from 'lodash-es/drop'
+import get from 'lodash-es/get.js'
+import map from 'lodash-es/map.js'
+import filter from 'lodash-es/filter.js'
+import drop from 'lodash-es/drop.js'
 import genID from 'wsemi/src/genID.mjs'
 import now2strp from 'wsemi/src/now2strp.mjs'
 import isestr from 'wsemi/src/isestr.mjs'
@@ -35,15 +35,15 @@ function isWindows() {
  * @param {String} [opt.ver='4.8'] 輸入調用windows程序之Net Framework版本字串，可有'4.5'、'4.6'、'4.7.2'與'4.8'，預設'4.8'
  * @returns {Promise} 回傳Promise，resolve回傳成功訊息，reject回傳錯誤訊息
  * @example
- * import WDataMseed from './src/WDataMseed.mjs'
+ * import wds from './src/WDataMseed.mjs'
  *
  * async function test() {
  *
  *     //fp
  *     let fp = './g.mseed'
  *
- *     //WDataMseed
- *     let r = await WDataMseed(fp)
+ *     //wds
+ *     let r = await wds(fp)
  *     console.log(r)
  *     // [
  *     //   {
