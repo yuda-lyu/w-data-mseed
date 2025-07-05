@@ -8,7 +8,7 @@ function isWindows() {
 }
 
 
-describe('test', function() {
+describe('WDataMseed', function() {
 
     //check
     if (!isWindows()) {

@@ -97,17 +97,28 @@ async function WDataMseed(fp, opt = {}) {
         return Promise.reject('fp is not a file')
     }
 
+    //fnExe
+    let fnExe = `mseed2ascii.exe`
+
     //fdExe
-    let fdms = 'mseed2ascii-2.6'
-    let fdExeSelf = `${fdSrv}/${fdms}/`
-    let fdExeDist = `${fdSrv}/node_modules/w-data-mseed/${fdms}/`
-    let fdExe = fdExeSelf
-    if (fsIsFolder(fdExeDist)) {
-        fdExe = fdExeDist
+    let fdExe = ''
+    if (true) {
+        let fdExeSrc = `${fdSrv}/mseed2ascii-2.6/`
+        let fdExeNM = `${fdSrv}/node_modules/w-data-mseed/mseed2ascii-2.6/`
+        if (fsIsFile(`${fdExeSrc}${fnExe}`)) {
+            fdExe = fdExeSrc
+        }
+        else if (fsIsFile(`${fdExeNM}${fnExe}`)) {
+            fdExe = fdExeNM
+        }
+        else {
+            return Promise.reject('can not find folder for mseed2ascii')
+        }
     }
+    // console.log('fdExe', fdExe)
 
     //prog
-    let prog = path.resolve(fdExe, 'mseed2ascii.exe')
+    let prog = path.resolve(fdExe, fnExe)
     // prog = `"${prog}"` //用雙引號包住避免路徑有空格 //execProcess預設spawn不需要用雙引號括住prog
     // console.log('prog', prog)
 
@@ -178,12 +189,16 @@ async function WDataMseed(fp, opt = {}) {
     process.chdir(cwdOri)
 
     //fsTreeFolder
-    let rs = fsTreeFolder(fdOut)
-    // console.log('rs1', rs)
-    rs = filter(rs, (v) => {
-        return v.name !== fnIn
-    })
-    // console.log('rs2', rs)
+    let rs = []
+    try {
+        rs = fsTreeFolder(fdOut)
+        // console.log('rs(tree)', rs)
+        rs = filter(rs, (v) => {
+            return v.name !== fnIn
+        })
+    }
+    catch (err) {}
+    // console.log('rs(filter)', rs)
 
     //check
     if (size(rs) === 0) {
@@ -198,6 +213,7 @@ async function WDataMseed(fp, opt = {}) {
             data: null,
         }
     })
+    // console.log('rs(map)', rs)
 
     // function readHeads(fp) {
     //     let bs = fs.readFileSync(fp)
