@@ -180,8 +180,8 @@ async function WDataMseed(fp, opt = {}) {
             //執行成功未有stdout訊息
         })
         .catch((err) => {
-            // console.log('execProcess catch', err)
-            errTemp = err
+            console.log('execProcess catch', err)
+            errTemp = err.toString()
             //mseed2ascii執行成功會通過stderr輸出, 導致execProcess用catch提供成功訊息, 故用catch儲存err仍無法判識是否執行失敗
         })
 
