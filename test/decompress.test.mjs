@@ -1,6 +1,6 @@
+import fs from 'fs'
 import assert from 'assert'
 import wds from '../src/WDataMseed.mjs'
-import rdp from './g.json' assert {type:'json'}
 
 
 function isWindows() {
@@ -10,30 +10,25 @@ function isWindows() {
 
 describe('test', function() {
 
+    //check
+    if (!isWindows()) {
+        return
+    }
+
     it('decompress', async function() {
-        let rin = null
-        let rout = null
 
-        if (isWindows()) {
+        //fpIn
+        let fpIn = './test/g.mseed'
+        // let fp = './20200917093752_RST01_acc.mseed'
 
-            //rin
-            rin = rdp
+        //r
+        let j = fs.readFileSync('./test/g.json', 'utf8')
+        let r = JSON.parse(j)
 
-            //fp
-            let fp = './test/g.mseed'
-            // let fp = './20200917093752_RST01_acc.mseed'
+        //rr
+        let rr = await wds(fpIn)
 
-            //rout
-            rout = await wds(fp)
-
-        }
-        else {
-            //github單元測試為linux, 略過測試
-            rin = 1
-            rout = 1
-        }
-
-        assert.strict.deepEqual(rin, rout)
+        assert.strict.deepEqual(r, rr)
     })
 
 })

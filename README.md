@@ -4,7 +4,6 @@ A tool for miniSEED(mseed) data.
 ![language](https://img.shields.io/badge/language-JavaScript-orange.svg) 
 [![npm version](http://img.shields.io/npm/v/w-data-mseed.svg?style=flat)](https://npmjs.org/package/w-data-mseed) 
 [![license](https://img.shields.io/npm/l/w-data-mseed.svg?style=flat)](https://npmjs.org/package/w-data-mseed) 
-[![gzip file size](http://img.badgesize.io/yuda-lyu/w-data-mseed/master/dist/w-data-mseed.umd.js.svg?compression=gzip)](https://github.com/yuda-lyu/w-data-mseed)
 [![npm download](https://img.shields.io/npm/dt/w-data-mseed.svg)](https://npmjs.org/package/w-data-mseed) 
 [![npm download](https://img.shields.io/npm/dm/w-data-mseed.svg)](https://npmjs.org/package/w-data-mseed) 
 [![jsdelivr download](https://img.shields.io/jsdelivr/npm/hm/w-data-mseed.svg)](https://www.jsdelivr.com/package/npm/w-data-mseed)
@@ -17,8 +16,6 @@ To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-
 
 ## Installation
 ### Using npm(ES6 module):
-> **Note:** `w-data-mseed` is mainly dependent on `lodash-es` and `wsemi`, and should run in `Windows`.
-
 ```alias
 npm i w-data-mseed
 ```

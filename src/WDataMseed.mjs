@@ -4,6 +4,7 @@ import process from 'process'
 import get from 'lodash-es/get.js'
 import map from 'lodash-es/map.js'
 import filter from 'lodash-es/filter.js'
+import size from 'lodash-es/size.js'
 import drop from 'lodash-es/drop.js'
 import genID from 'wsemi/src/genID.mjs'
 import now2strp from 'wsemi/src/now2strp.mjs'
@@ -14,6 +15,7 @@ import sep from 'wsemi/src/sep.mjs'
 import execProcess from 'wsemi/src/execProcess.mjs'
 import fsIsFile from 'wsemi/src/fsIsFile.mjs'
 import fsIsFolder from 'wsemi/src/fsIsFolder.mjs'
+import fsCopyFile from 'wsemi/src/fsCopyFile.mjs'
 import fsCreateFolder from 'wsemi/src/fsCreateFolder.mjs'
 import fsTreeFolder from 'wsemi/src/fsTreeFolder.mjs'
 import fsDeleteFolder from 'wsemi/src/fsDeleteFolder.mjs'
@@ -73,6 +75,11 @@ function isWindows() {
 async function WDataMseed(fp, opt = {}) {
     let errTemp = null
 
+    //isWindows
+    if (!isWindows()) {
+        return Promise.reject('operating system is not windows')
+    }
+
     //fdOutPre
     let fdOutPre = get(opt, 'fdOutPre')
     if (!isestr(fdOutPre)) {
@@ -83,11 +90,6 @@ async function WDataMseed(fp, opt = {}) {
     let readWithData = get(opt, 'readWithData')
     if (!isbol(readWithData)) {
         readWithData = true
-    }
-
-    //isWindows
-    if (!isWindows()) {
-        return Promise.reject('operating system is not windows')
     }
 
     //check
@@ -106,7 +108,7 @@ async function WDataMseed(fp, opt = {}) {
 
     //prog
     let prog = path.resolve(fdExe, 'mseed2ascii.exe')
-    prog = `"${prog}"` //用雙引號包住避免路徑有空格
+    // prog = `"${prog}"` //用雙引號包住避免路徑有空格 //execProcess預設spawn不需要用雙引號括住prog
     // console.log('prog', prog)
 
     //fdOut
@@ -126,12 +128,12 @@ async function WDataMseed(fp, opt = {}) {
     // console.log('fpIn', fpIn)
 
     //fsCopyFile
-    try {
-        fs.copyFileSync(fp, fpIn)
-    }
-    catch (err) {
-        console.log('copyFileSync', err)
-        return Promise.reject('copyFileSync error')
+    if (true) {
+        let r = fsCopyFile(fp, fpIn)
+        if (r.error) {
+            console.log('fsCopyFile', r.error)
+            return Promise.reject('fsCopyFile error')
+        }
     }
 
     //check
@@ -141,7 +143,8 @@ async function WDataMseed(fp, opt = {}) {
     }
 
     //cmd, -G為輸出GeoCSV格式
-    let cmd = `-G "${fpIn}"`
+    // let cmd = ['-G', `"${fpIn}"`] //`-G "${fpIn}"`
+    let cmd = ['-G', fpIn] //execProcess預設spawn不需要用雙引號括住fpIn
     // console.log('cmd', cmd)
 
     //cwdOri, cwdTar
@@ -154,24 +157,25 @@ async function WDataMseed(fp, opt = {}) {
     // console.log('process.cwd2', process.cwd())
 
     //execProcess
-    await execProcess(prog, cmd)
-        // .then(function(res) {
-        //     console.log('execProcess then', res)
-        // })
-        .catch((err) => {
-            console.log('execProcess catch', err)
-            errTemp = 'execProcess error'
+    let cbStdout = (msg) => {
+        // console.log('cbStdout', msg)
+    }
+    let cbStderr = (msg) => {
+        // console.log('cbStderr', msg)
+    }
+    await execProcess(prog, cmd, { cbStdout, cbStderr })
+        .then(function(res) {
+            // console.log('execProcess then', res)
+            //執行成功未有stdout訊息
         })
-        // .finally(() => {
-        // })
+        .catch((err) => {
+            // console.log('execProcess catch', err)
+            errTemp = err
+            //mseed2ascii執行成功會通過stderr輸出, 導致execProcess用catch提供成功訊息, 故用catch儲存err仍無法判識是否執行失敗
+        })
 
     //chdir, 不論正常或錯誤皆需還原工作路徑
     process.chdir(cwdOri)
-
-    //check
-    if (isestr(errTemp)) {
-        return Promise.reject(errTemp)
-    }
 
     //fsTreeFolder
     let rs = fsTreeFolder(fdOut)
@@ -180,6 +184,11 @@ async function WDataMseed(fp, opt = {}) {
         return v.name !== fnIn
     })
     // console.log('rs2', rs)
+
+    //check
+    if (size(rs) === 0) {
+        return Promise.reject(errTemp) //因無輸出檔, errTemp可假設為錯誤訊息使用reject會傳並跳出, 且不刪除fdOut資料夾與其內輸入或可能之輸出檔, 供查找偵測之用
+    }
 
     //map
     rs = map(rs, (v) => {
@@ -362,7 +371,7 @@ async function WDataMseed(fp, opt = {}) {
             }
         })
 
-        //fsDeleteFolder, 若讀取檔案則可刪除暫存資料夾
+        //fsDeleteFolder, 若readWithData=true則可刪除暫存資料夾
         fsDeleteFolder(fdOut)
 
     }
