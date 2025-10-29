@@ -15,6 +15,7 @@ To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-
 > `w-data-mseed` is basing on `mseed2ascii` of IRIS.
 
 ## Installation
+
 ### Using npm(ES6 module):
 ```alias
 npm i w-data-mseed
