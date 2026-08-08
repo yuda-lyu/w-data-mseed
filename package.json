@@ -1,9 +1,9 @@
 {
   "name": "w-data-mseed",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "main": "dist/w-data-mseed.umd.js",
   "dependencies": {
-    "wsemi": "^1.8.68"
+    "wsemi": "^1.8.70"
   },
   "devDependencies": {
     "w-package-tools": "^1.1.12"
