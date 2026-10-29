@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#WDataMseed">WDataMseed</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#WDataMseed">WDataMseed</a></li><li><a href="global.html#ensureBins">ensureBins</a></li></ul>
     
 </nav>
 
@@ -140,13 +140,15 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>讀取miniSEED檔案，只能用於Windows作業系統</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>讀取miniSEED檔案，只能用於Windows作業系統</p>
+<p>轉檔由mseed2ascii.exe(與相鄰之cygwin1.dll、cygz.dll)完成，這些外部執行檔不含於npm包，首次轉檔時經ensureBins自GitHub(釘選提交)或環境變數W_BIN_MIRROR之鏡像取得，以bin/manifest.json之SHA-256與大小逐檔校驗後存於快取(預設為套件根之bin-cache/，可由W_BIN_CACHE改位置)，之後自快取取得(亦校驗)；環境變數W_BIN_OFFLINE=1時不連網。取得失敗則reject字串，內含錯誤代碼(如E_OFFLINE_MISSING、E_HASH_MISMATCH)與原因，詳見README〈External executable〉</p>
+<p>轉檔之暫存輸出夾建於作業系統暫存夾os.tmpdir()下(夾名為<code>${fdOutPre}&lt;時間&gt;-&lt;亂數&gt;</code>)，呼叫端之工作路徑內不會出現任何檔。轉檔成功且readWithData=true時刪除該夾；失敗時保留該夾供查找，reject之訊息末行附其絕對路徑(<code>output folder kept for inspection: &lt;路徑&gt;</code>)</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WDataMseed.mjs.html">WDataMseed.mjs</a>, <a href="WDataMseed.mjs.html#line75">line 75</a>
+        <a href="WDataMseed.mjs.html">WDataMseed.mjs</a>, <a href="WDataMseed.mjs.html#line129">line 129</a>
     </li></ul></dd>
     
 
@@ -363,6 +365,86 @@
         </tr>
 
     
+
+        <tr>
+            
+                <td class="name"><code>fdOutPre</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>'_'</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入暫存輸出夾之夾名前綴字串，預設'_'；為相對名稱時夾建於os.tmpdir()下，給絕對路徑則於該處建立</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>readWithData</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Boolean</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>true</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入是否讀取輸出檔數據布林值，預設true；為false時保留輸出夾，回傳之各項path為輸出檔位置，由呼叫端自行刪除</p></td>
+        </tr>
+
+    
     </tbody>
 </table>
 
@@ -392,7 +474,197 @@
 
         
 <div class="param-desc">
-    <p>回傳Promise，resolve回傳成功訊息，reject回傳錯誤訊息</p>
+    <p>回傳Promise，resolve回傳成功訊息，reject回傳錯誤訊息字串(輸出夾已建立後之錯誤，訊息末行附保留之輸出夾絕對路徑)</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="ensureBins"><span class="type-signature"></span>ensureBins<span class="signature">(opt<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>取得本套件之外部執行檔組mseed2ascii(mseed2ascii.exe與其相鄰之cygwin1.dll、cygz.dll): 首次使用時下載(或自鏡像取得)並以bin/manifest.json之SHA-256與大小逐檔校驗, 整組原子放入快取, 之後自快取取得(亦校驗)</p>
+<p>規格: 外部執行檔之存放下載校驗與離線(制式規格)§6、M6; 實作為wsemi之fsEnsureBins, 本套件不另寫下載、快取、鏡像、校驗
+環境變數: W_BIN_CACHE(共用快取資料夾)、W_BIN_MIRROR(鏡像, 本地資料夾或http(s)網址)、W_BIN_OFFLINE(1為離線), 見README〈External executable〉</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="ensureBins.mjs.html">ensureBins.mjs</a>, <a href="ensureBins.mjs.html#line26">line 26</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>import WDataMseed from 'w-data-mseed'
+
+//部署前預先取得, 回傳之組資料夾內有mseed2ascii.exe、cygwin1.dll與cygz.dll
+let bins = await WDataMseed.ensureBins()
+console.log(bins.mseed2ascii)
+console.log(bins.bundles.mseed2ascii.files['mseed2ascii.exe'])</code></pre>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+        <th>Default</th>
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>opt</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>{}</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入設定物件, 交wsemi之fsEnsureBins(names、cacheDir、mirror、offline、onProgress等), pkgRoot固定為本套件根</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳Promise, resolve回傳{ mseed2ascii: 組資料夾絕對路徑 }, 並帶不可列舉之bundles: { mseed2ascii: { dir, id, files: { 'mseed2ascii.exe': 絕對路徑, 'cygwin1.dll': 絕對路徑, 'cygz.dll': 絕對路徑 } } }, reject回傳帶code之Error(E_OFFLINE_MISSING等)</p>
 </div>
 
 
@@ -434,7 +706,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Oct 28 2026 01:34:19 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Thu Oct 29 2026 12:04:35 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
