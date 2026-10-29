@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "pkg": "w-data-mseed",
+  "mode": "pinned",
+  "repo": "yuda-lyu/w-data-mseed",
+  "commit": "b296900a3b8ceccfbecec747955a28484299120f",
+  "bundles": [
+    {
+      "name": "mseed2ascii",
+      "dir": "bin/mseed2ascii",
+      "files": [
+        {
+          "path": "cygwin1.dll",
+          "sha256": "28242f3752644b4b8395f7221e38b13bb6eb870f26af7292d9c86144c6b7b3fa",
+          "size": 3554998
+        },
+        {
+          "path": "cygz.dll",
+          "sha256": "8386a37958bf58b41dc35c2e95bc6d3f18ef223dc4211aa4ee747059f0d2c39a",
+          "size": 89619
+        },
+        {
+          "path": "mseed2ascii.exe",
+          "sha256": "4b7e1ad7d87bc3f935362e11185cce8f0a6af02787adb0e2a57a51796582756f",
+          "size": 281651
+        }
+      ]
+    }
+  ]
+}

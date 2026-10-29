@@ -1,6 +1,7 @@
 import fs from 'fs'
 import assert from 'assert'
 import wds from '../src/WDataMseed.mjs'
+import { setBinEnv } from './tools/binEnv.mjs'
 
 
 function isWindows() {
@@ -14,6 +15,17 @@ describe('WDataMseed', function() {
     if (!isWindows()) {
         return
     }
+
+    //以repo bin/之實檔建本機鏡像並離線取得mseed2ascii.exe(不連外網, 規格§8), 快取與鏡像在test/_tmp/WDataMseed-golden/
+    let env = null
+
+    before(function() {
+        env = setBinEnv('WDataMseed-golden')
+    })
+
+    after(function() {
+        env.restore()
+    })
 
     it('decompress', async function() {
 

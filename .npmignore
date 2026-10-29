@@ -11,3 +11,12 @@ tmp
 
 # 指引要求文件入 git 版控、不入 npm 包(2026-10-22)
 sgud
+
+# 外部執行檔不入 npm 包, 只有清單隨包發布(制式規格 S1、S5; 不可寫bin/, 否則清單也不入包)
+/bin/*
+!/bin/manifest.json
+/bin-cache/
+/test/_tmp/
+
+# mseed2ascii之原始碼與文件(GPL-3, 供提供原始碼)留在repo, 不入 npm 包; 執行檔與dll在bin/mseed2ascii/
+/mseed2ascii-2.6/
