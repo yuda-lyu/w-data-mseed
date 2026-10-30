@@ -1,7 +1,6 @@
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
-import cp from 'child_process'
 import process from 'process'
 import get from 'lodash-es/get.js'
 import map from 'lodash-es/map.js'
@@ -20,6 +19,7 @@ import fsCopyFile from 'wsemi/src/fsCopyFile.mjs'
 import fsCreateFolder from 'wsemi/src/fsCreateFolder.mjs'
 import fsTreeFolder from 'wsemi/src/fsTreeFolder.mjs'
 import fsDeleteFolder from 'wsemi/src/fsDeleteFolder.mjs'
+import execProcess from 'wsemi/src/execProcess.mjs'
 import ensureBins from './ensureBins.mjs'
 
 
@@ -34,55 +34,14 @@ function rejectKeep(msg, fdOut) {
 }
 
 
-//runExe, 以子行程之cwd選項指定工作路徑執行prog, 不改本行程之process.cwd(), 故多個轉換併發時不會互相干擾
-//mseed2ascii預設把輸出檔寫在工作路徑且無指定輸出資料夾之參數, 故以cwd指向各次轉換專用之輸出夾
-//不論成功與否皆resolve { err, text }: err於離開碼為0時為null, 否則為`code[離開碼]:\n輸出`或`spawn[錯誤碼]:\n訊息`(同execProcess); text為stdout與stderr合併之輸出(mseed2ascii之訊息輸出於stderr)
-function runExe(prog, args, cwd) {
-    return new Promise((resolve) => {
-        let chunks = []
-        let settled = false
-        let settle = (fnErr) => {
-            if (settled) {
-                return
-            }
-            settled = true
-            let text = Buffer.concat(chunks).toString('utf8')
-            resolve({ err: fnErr(text), text })
-        }
-        let sp = null
-        try {
-            sp = cp.spawn(prog, args, { cwd, windowsHide: true, shell: false, stdio: ['ignore', 'pipe', 'pipe'] })
-        }
-        catch (err) {
-            settle(() => `spawn[${get(err, 'code')}]:\n${get(err, 'message')}`)
-            return
-        }
-        //error須先於存取stdout與stderr監聽: 建立失敗(找不到執行檔、系統資源用盡等)時以error事件回報
-        sp.on('error', (err) => {
-            settle(() => `spawn[${get(err, 'code')}]:\n${get(err, 'message')}`)
-        })
-        let onData = (c) => {
-            chunks.push(c)
-        }
-        if (sp.stdout) {
-            sp.stdout.on('data', onData)
-        }
-        if (sp.stderr) {
-            sp.stderr.on('data', onData)
-        }
-        sp.on('close', (code) => {
-            settle((text) => (code === 0 ? null : `code[${code}]:\n${text}`))
-        })
-    })
-}
-
-
 /**
  * 讀取miniSEED檔案，只能用於Windows作業系統
  *
  * 轉檔由mseed2ascii.exe(與相鄰之cygwin1.dll、cygz.dll)完成，這些外部執行檔不含於npm包，首次轉檔時經ensureBins自GitHub(釘選提交)或環境變數W_BIN_MIRROR之鏡像取得，以bin/manifest.json之SHA-256與大小逐檔校驗後存於快取(預設為套件根之bin-cache/，可由W_BIN_CACHE改位置)，之後自快取取得(亦校驗)；環境變數W_BIN_OFFLINE=1時不連網。取得失敗則reject字串，內含錯誤代碼(如E_OFFLINE_MISSING、E_HASH_MISMATCH)與原因，詳見README〈External executable〉
  *
  * 轉檔之暫存輸出夾建於作業系統暫存夾os.tmpdir()下(夾名為`${fdOutPre}<時間>-<亂數>`)，呼叫端之工作路徑內不會出現任何檔。轉檔成功且readWithData=true時刪除該夾；失敗時保留該夾供查找，reject之訊息末行附其絕對路徑(`output folder kept for inspection: <路徑>`)
+ *
+ * 轉檔子行程由wsemi之execProcess(spawn模式)啟動，以其cwd選項指向輸出夾(mseed2ascii之輸出檔寫在工作路徑)，不改本行程之process.cwd()，故多個轉換可併發。無輸出檔時之reject字串依來源為：離開碼非0為`code[N]:\n輸出`，無法啟動為`spawn[錯誤碼]:\n訊息`(輸出夾於啟動前已不存在時為`spawn[ENOENT]:\ncwd is not an existing folder: <輸出夾>`)，離開碼為0而無輸出檔(如輸入非miniSEED)為mseed2ascii之輸出訊息
  *
  * @param {String} fp 輸入檔案路徑字串
  * @param {Object} [opt={}] 輸入設定物件，預設{}
@@ -208,12 +167,17 @@ async function WDataMseed(fp, opt = {}) {
     let cmd = ['-G', fpIn] //spawn不經shell, 不需要用雙引號括住fpIn
     // console.log('cmd', cmd)
 
-    //runExe, 以子行程之cwd指向輸出夾(mseed2ascii預設輸出檔案是在工作路徑, 不指定則輸出檔會出現在專案下), 不改本行程之工作路徑
-    let { err: errExe, text: msgExe } = await runExe(prog, cmd, fdOut)
-    if (errExe) {
-        console.log('runExe error', errExe)
-        errTemp = errExe
-    }
+    //execProcess, 以cwd指向輸出夾(mseed2ascii預設輸出檔案是在工作路徑, 不指定則輸出檔會出現在專案下), 不改本行程之工作路徑, 故多個轉換併發時不會互相干擾
+    //resolve為stdout與stderr合併之輸出(mseed2ascii之訊息輸出於stderr), 離開碼為0即resolve; reject為字串`code[離開碼]:\n輸出`或`spawn[錯誤碼]:\n訊息`(輸出夾不存在時為`spawn[ENOENT]:\ncwd is not an existing folder: <夾>`)
+    let msgExe = ''
+    await execProcess(prog, cmd, { cwd: fdOut })
+        .then((r) => {
+            msgExe = r
+        })
+        .catch((err) => {
+            console.log('execProcess error', err)
+            errTemp = err
+        })
 
     //fsTreeFolder
     let rs = []

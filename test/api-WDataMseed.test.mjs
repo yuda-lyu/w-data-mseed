@@ -254,7 +254,7 @@ describe(`WDataMseed (executable obtained by ensureBins)`, function() {
         assert.strict.equal(nFetch, 0)
     })
 
-    //以假子行程驗證runExe之各失敗分支(不啟動真exe): 同步拋錯、error事件、離開碼非0; 皆reject帶prefix之說明字串(同execProcess之格式), 並保留輸出夾
+    //以假子行程驗證外部執行檔(wsemi execProcess啟動)之各失敗分支(不啟動真exe): 同步拋錯、error事件、離開碼非0; 皆reject帶prefix之說明字串(execProcess之格式), 並保留輸出夾, 訊息末行附其絕對路徑
     let fakeChild = (fn) => {
         let ee = new EventEmitter()
         ee.stdout = new EventEmitter()
@@ -262,6 +262,7 @@ describe(`WDataMseed (executable obtained by ensureBins)`, function() {
         setImmediate(() => fn(ee))
         return ee
     }
+    //rejectWith回傳{ e, fd }: e為reject之字串, fd為保留之輸出夾; 呼叫端以全文相等斷言(prefix與夾行皆在內)
     let rejectWith = async (fnSpawn) => {
         let before = outDirs()
         try {
@@ -269,36 +270,71 @@ describe(`WDataMseed (executable obtained by ensureBins)`, function() {
             let err = await wds(fpHead, { fdOutPre })
                 .then(() => null, (e) => ({ e }))
             assert.strict.notEqual(err, null)
+            assert.strict.equal(typeof err.e, 'string')
             assert.strict.equal(outDirs().length - before.length, 1) //保留輸出夾供查找
             let fd = outDirs().find((v) => !before.includes(v))
             assert.strict.equal(err.e.includes(fd), true, String(err.e)) //訊息含保留夾之絕對路徑
-            return err.e
+            return { e: err.e, fd }
         }
         finally {
             rmNew(before)
         }
     }
+    let lineKept = (fd) => `output folder kept for inspection: ${fd}`
 
     it(`rejects with spawn[code] when the child process can not be created (throws synchronously or emits error)`, async function() {
-        let e1 = await rejectWith(() => {
+        let r1 = await rejectWith(() => {
             throw Object.assign(new Error('boom'), { code: 'EPERM' })
         })
-        assert.strict.equal(e1.startsWith('spawn[EPERM]:\nboom\n'), true, e1)
+        assert.strict.equal(r1.e, `spawn[EPERM]:\nboom\n${lineKept(r1.fd)}`)
 
-        let e2 = await rejectWith(() => fakeChild((ee) => {
+        let r2 = await rejectWith(() => fakeChild((ee) => {
             ee.emit('error', Object.assign(new Error('not found'), { code: 'ENOENT' }))
             ee.emit('close', -2) //error之後node可能仍發出close, 不得改變結果
         }))
-        assert.strict.equal(e2.startsWith('spawn[ENOENT]:\nnot found\n'), true, e2)
+        assert.strict.equal(r2.e, `spawn[ENOENT]:\nnot found\n${lineKept(r2.fd)}`) //cwd(輸出夾)存在, 故訊息不改指cwd
     })
 
     it(`rejects with code[N] and the output of the child when it exits with a non-zero code and writes no file`, async function() {
-        let e = await rejectWith(() => fakeChild((ee) => {
+        let r = await rejectWith(() => fakeChild((ee) => {
             ee.stderr.emit('data', Buffer.from('fake '))
             ee.stdout.emit('data', Buffer.from('failure'))
             ee.emit('close', 3)
         }))
-        assert.strict.equal(e.startsWith('code[3]:\nfake failure\n'), true, e)
+        assert.strict.equal(r.e, `code[3]:\nfake failure\n${lineKept(r.fd)}`) //輸出依到達順序合併
+    })
+
+    it(`rejects with the output of the child when it exits with code 0 and writes no file (the output is the only message)`, async function() {
+        let r = await rejectWith(() => fakeChild((ee) => {
+            ee.stderr.emit('data', Buffer.from('Error reading x: No SEED data detected\n'))
+            ee.emit('close', 0)
+        }))
+        assert.strict.equal(r.e, `Error reading x: No SEED data detected\n\n${lineKept(r.fd)}`)
+    })
+
+    it(`rejects with spawn[ENOENT] naming the cwd when the output folder is gone before the child starts, and never changes process.cwd()`, async function() {
+        let before = outDirs()
+        let cwdSpawn = ''
+        try {
+            //啟動前使輸出夾消失(真spawn以不存在之cwd啟動): execProcess把ENOENT改指cwd, 不指向執行檔
+            cp.spawn = function(prog, args, opt, ...rest) {
+                cwdSpawn = opt.cwd
+                fs.rmSync(opt.cwd, { recursive: true, force: true })
+                return spawnOri.call(this, prog, args, opt, ...rest)
+            }
+            let err = await wds(fpHead, { fdOutPre })
+                .then(() => null, (e) => ({ e }))
+            assert.strict.notEqual(err, null) //須reject
+            assert.strict.equal(typeof err.e, 'string')
+            assert.strict.equal(path.isAbsolute(cwdSpawn), true)
+            assert.strict.equal(fs.existsSync(cwdSpawn), false)
+            assert.strict.equal(err.e.startsWith(`spawn[ENOENT]:\ncwd is not an existing folder: ${cwdSpawn}\n`), true, err.e)
+            assert.strict.equal(err.e.includes('mseed2ascii.exe'), false, err.e) //不指向執行檔
+            assert.strict.equal(process.cwd(), cwdOri)
+        }
+        finally {
+            rmNew(before)
+        }
     })
 
     //os.tmpdir()讀取TEMP與TMP, 故以環境變數把暫存夾導向測試專用夾(子行程以env傳入; 本行程於測試內暫改並還原), 才能精確斷言輸出夾落點而不受系統暫存夾內他人之檔干擾

@@ -2,6 +2,15 @@
 
 本檔為執行工作時特有之累積經驗,留給後續之嘗試、執行與判斷,由agent自行編列、擴充與維護.過長時抽出舊者為`experience_<年月日>.md`,並於本檔註明何時抽出.
 
+## 第 179 項(2026-10-30;`runExe` 改回 wsemi `execProcess`)
+
+- **`execProcess(prog, args, { cwd })` 與舊 `runExe` 之對應**:離開碼 0 → resolve「stdout+stderr 依到達順序合併」之字串(即舊 `text`);離開碼非 0 → reject `code[N]:\n輸出`;無法啟動 → reject `spawn[錯誤碼]:\n訊息`。故主檔以 `.then((r) => { msgExe = r }).catch((err) => { errTemp = err })` 取代 `{ err, text }`,後段 `errTemp || msgExe` 不變,對外之成功與失敗字串皆與舊版相同(假子行程案改為全文相等後在舊碼上亦綠,證明形狀未變)。
+- **唯一可見差異:cwd 不存在**。node 對不存在之 cwd 回 ENOENT 而訊息指向執行檔;`execProcess` 改寫為 `spawn[ENOENT]:\ncwd is not an existing folder: <cwd>`。測法:在 `cp.spawn` 攔截內先 `fs.rmSync(opt.cwd)` 再呼叫真 `spawn`(不需假子行程);舊碼上該案確定性紅(`spawn <exe> ENOENT`)。已寫入 README〈Breaking changes〉。
+- **攔截 `cp.spawn` 仍有效**:wsemi `execProcess` 以 `import cp from 'child_process'`、`cp.spawn(...)` 呼叫(default 匯出同一物件),測試改 `cp.spawn` 屬性照樣攔得到(含假子行程:只需 `stdout`、`stderr`、`on`,無 `pid` 亦可);但主檔已不 import `child_process`。
+- **子行程 stdin 由 `'ignore'` 變為預設 pipe**:mseed2ascii 只讀檔案參數,不讀 stdin,實測轉檔與併發皆正常;非可見行為。
+- **`rejectKeep` 不查夾是否存在**:cwd 不存在案之訊息末行仍寫「kept for inspection」,但夾已被測試刪除(罕見競態,列入 state 已知缺口,未改)。
+- **變異在副本做且不需 junction**:`./tmp/a-mseed/mut/` 放 `src/`、`test/`、`bin/`、`package.json`,bare import 往上層解析到 repo 之 `node_modules`;腳本一次取鎖跑完全部變異(`tmp/a-mseed/mutate.mjs`,8 項全擊殺)。無 `cwd` 之變異會在副本根留 `*.csv` 與 `_<時間>-<id>` 夾,腳本於每項前清除。
+
 ## bin-mseed2(2026-10-29;輸出夾改 `os.tmpdir()`、第三方授權文)
 
 - **測輸出夾落點:用 `TEMP`/`TMP` 導向,不比對系統暫存夾**。`os.tmpdir()` 在 Windows 讀 `TEMP`→`TMP`,且每次呼叫重讀;子行程以 `env: {...process.env, TEMP, TMP}` 指到 `test/_tmp/WDataMseed/` 下專用夾,本行程內測試暫改 `process.env.TEMP/TMP` 並還原。如此斷言「專用夾內恰有一個保留夾/成功後為空」才精確,不受系統暫存夾他人之檔干擾。主檔因此須在**呼叫當下**取 `os.tmpdir()`(不在模組載入時取)。
@@ -14,10 +23,10 @@
 
 ## bin-mseed(2026-10-29;D 類改檔案組、移除 `process.chdir`)
 
-- **wsemi 1.9.30 之 `execProcess` 沒有 `cwd` 選項**(只有 mode、cbStdout、cbStderr、codeCmd、useChcp、timeout、onTrace),而 mseed2ascii 的輸出檔預設寫在工作路徑、無輸出夾參數(`-o` 會把所有 channel 合成單檔,不是要的結果)。故自有 `runExe`(`child_process.spawn` 加 `cwd`)。日後 wsemi 增 `opt.cwd` 即可換回。
+- **wsemi 1.9.30 之 `execProcess` 沒有 `cwd` 選項**(只有 mode、cbStdout、cbStderr、codeCmd、useChcp、timeout、onTrace),而 mseed2ascii 的輸出檔預設寫在工作路徑、無輸出夾參數(`-o` 會把所有 channel 合成單檔,不是要的結果)。故當時自有 `runExe`(`child_process.spawn` 加 `cwd`)。(2026-10-30 wsemi 1.9.33 增 `opt.cwd`,已換回 `execProcess`,`runExe` 已刪,見上節。)
 - **舊版 `process.chdir` 之併發錯誤可穩定重現**:呼叫 B 開始時 cwd 已被 A 切到 A 的輸出夾,B 記下的「原工作路徑」就是 A 的輸出夾;A 結束後刪掉它,B 結束時 `process.chdir(A的輸出夾)` 丟 `ENOENT`(修前紅:`src/WDataMseed.mjs:189`)。測「併發」須兩個輸入不同(取 `g.mseed` 前 200 筆與後 200 筆記錄,channel 不同、輸出檔名不同),並以獨立執行的 exe 當 oracle。
-- **mseed2ascii 的行為**:成功時離開碼 0,訊息(`Wrote N samples for …`)在 stderr;輸入非 miniSEED 時**離開碼仍為 0**、無輸出檔、stderr 為 `Error reading …: No SEED data detected`。舊碼只在 execProcess reject 時才記錯誤字串,現行 wsemi 於離開碼 0 即 resolve,故舊版對壞檔 reject `null`(訊息遺失);`runExe` 一律保留合併輸出,無輸出檔時以之 reject。
-- **攔截 `child_process.spawn` 之寫法**:主檔須 `import cp from 'child_process'` 並以 `cp.spawn(...)` 呼叫(default 匯出即 CJS 物件,測試改其屬性才會生效);若改成具名匯入 `{ spawn }`,測試改屬性無效而攔不到。wsemi 之 `fsEnsureBins` 自己用具名匯入 spawn(只用於 tar),不受影響。
+- **mseed2ascii 的行為**:成功時離開碼 0,訊息(`Wrote N samples for …`)在 stderr;輸入非 miniSEED 時**離開碼仍為 0**、無輸出檔、stderr 為 `Error reading …: No SEED data detected`。舊碼只在 execProcess reject 時才記錯誤字串,現行 wsemi 於離開碼 0 即 resolve,故舊版對壞檔 reject `null`(訊息遺失);主檔一律保留 resolve 之合併輸出(`msgExe`),無輸出檔時以之 reject。
+- **攔截 `child_process.spawn` 之寫法**:被測碼須 `import cp from 'child_process'` 並以 `cp.spawn(...)` 呼叫(default 匯出即 CJS 物件,測試改其屬性才會生效);若改成具名匯入 `{ spawn }`,測試改屬性無效而攔不到。(自第 179 項起啟動者為 wsemi `execProcess`,其即以 default 匯入呼叫 `cp.spawn`,攔截照常有效;主檔已不 import `child_process`。)wsemi 之 `fsEnsureBins` 自己用具名匯入 spawn(只用於 tar),不受影響。
 - **`E_OFFLINE_MISSING` 對檔案組之 `missing` 旗標**:組不整齊(缺一檔)時,錯誤物件 `missing[0].bundle.files[*].missing` 對**全組各檔**皆為 `true`(意為「本次未取得」),不是只標缺的那一檔;測試只斷言全組被列出與應放之組資料夾,不斷言單檔旗標。
 - **git 命令的 `^{commit}` 在 `execSync`(經 cmd.exe)下 `^` 被當跳脫字元吃掉**,`git cat-file -e <c>^{commit}` 變成找不到,測試因此被 `this.skip()` 而「靜默略過」(pending 1 案才發現);改 `execFileSync('git', [...])` 傳陣列。
 - **T1 誘餌**:先在 `bin-cache/decoy/`、`test/_tmp/…/leak/`、`mseed2ascii-2.6/` 放 exe/dll 再 `npm pack --dry-run --json`,缺任一條 `.npmignore` 規則即確定性變紅(變異 M11~M15 全擊殺);`bin/mseed2ascii/` 三檔本身是真檔,由 `/bin/*` 排除。測完在 `finally` 刪誘餌並還原 `bin-cache/`。
