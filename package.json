@@ -1,12 +1,12 @@
 {
   "name": "w-data-mseed",
-  "version": "1.0.41",
+  "version": "1.0.42",
   "main": "dist/w-data-mseed.umd.js",
   "dependencies": {
-    "wsemi": "^1.9.37"
+    "wsemi": "^1.9.42"
   },
   "devDependencies": {
-    "w-package-tools": "^1.1.21"
+    "w-package-tools": "^1.1.23"
   },
   "scripts": {
     "test": "mocha --parallel \"test/*.test.mjs\" --timeout 180000",
