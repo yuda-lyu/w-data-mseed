@@ -152,6 +152,18 @@ describe(`bin/manifest.json`, function() {
         assert.strict.equal(readme.includes('licenses/README.md'), true)
     })
 
+    it(`should document in the README, in the External executable section, that the place to put the files offline is read from err.missing[] (cachePath, mirrorPath), with a minimal example (O5)`, function() {
+        //O5(2026-11-18): 離線缺檔時之放置位置自err.missing[](cachePath、mirrorPath)讀取, 並附最小範例
+        let c = fs.readFileSync('README.md', 'utf8')
+        let i = c.indexOf('### External executable')
+        assert.strict.equal(i >= 0, true)
+        let j = c.indexOf('#### Included tool and license', i)
+        let sec = c.slice(i, j > i ? j : undefined)
+        for (let k of ['W_BIN_CACHE', 'W_BIN_MIRROR', 'W_BIN_OFFLINE', 'err.missing', 'cachePath', 'mirrorPath', 'bundle.files', `err.code === 'E_OFFLINE_MISSING'`, 'console.log(err.missing)']) {
+            assert.strict.equal(sec.includes(k), true, `README section lacks ${k}`)
+        }
+    })
+
     it(`should not download at install time: no postinstall script (D1)`, function() {
         let pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
         assert.strict.equal(Object.prototype.hasOwnProperty.call(pkg.scripts || {}, 'postinstall'), false)

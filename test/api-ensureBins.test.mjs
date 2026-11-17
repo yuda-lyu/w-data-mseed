@@ -233,12 +233,67 @@ describe(`ensureBins (bundle mseed2ascii)`, function() {
                 .catch((e) => e)
             assert.strict.equal(err && err.code, 'E_OFFLINE_MISSING', `${name}: ${err && err.message}`)
             assert.strict.equal(nNet, 0)
+            //V20: 鏡像組資料夾之位置在err.missing[](不在訊息); 鏡像中符合清單之其餘檔視為已取得(missing旗標false), 被竄改之該檔為true, 並有一筆拒用之說明
+            assert.strict.equal(err.missing[0].mirrorPath, fdGroup, name)
+            assert.strict.deepStrictEqual(err.missing[0].bundle.files.map((v) => [v.path, v.missing]), b.files.map((f) => [f.path, f.path === name]), name)
+            assert.strict.equal(err.missing[0].reasons.length, 1, name)
+            assert.strict.equal(err.message.includes(fdMirror) || err.message.includes(fdGroup) || err.missing[0].reasons.some((r) => r.includes(fdMirror)), false, name)
             assert.strict.deepStrictEqual(listFiles(cd2), [], name)
             assert.strict.equal(fs.existsSync(path.join(cd2, id)), false, name)
         }
     })
 
-    it(`T6: W_BIN_OFFLINE=1 without cache or mirror is E_OFFLINE_MISSING listing the whole group: every file, sha256, size and the group folder to place them in (M6, O3, D3)`, async function() {
+    //V20(訊息不帶值, 2026-11-18): 訊息只含檔案組之名稱與準備方法, 不含sha256、大小、快取與鏡像路徑、網址;
+    //  缺檔組之名稱、全組各檔(path、sha256、大小、cachePath、mirrorPath、url)與組資料夾(cachePath、mirrorPath)改由err.missing[]之結構欄位提供(O3、O5、M6、T6)
+    //pickBundleMissing, 缺檔組項之欄位(組為一項: sha256為null, size為全組各檔大小之和, cachePath與mirrorPath為組資料夾; 各檔之missing旗標另斷言)
+    let pickBundleMissing = (m) => {
+        return {
+            name: m.name,
+            sha256: m.sha256,
+            size: m.size,
+            cachePath: m.cachePath,
+            mirrorPath: m.mirrorPath,
+            url: m.url,
+            member: m.member,
+            archive: m.archive,
+            parts: m.parts,
+            bundle: { id: m.bundle.id, files: m.bundle.files.map((v) => ({ path: v.path, sha256: v.sha256, size: v.size, cachePath: v.cachePath, mirrorPath: v.mirrorPath, url: v.url, archive: v.archive })), archives: m.bundle.archives },
+        }
+    }
+    //wantBundleMissing, 缺檔組項之期望值(獨立由清單算出): fdGroup為組資料夾(快取), fdGroupMirror為鏡像之組資料夾(未設鏡像為null)
+    let wantBundleMissing = (fdGroup, fdGroupMirror) => {
+        return {
+            name: 'mseed2ascii',
+            sha256: null,
+            size: b.files.reduce((t, f) => t + f.size, 0),
+            cachePath: fdGroup,
+            mirrorPath: fdGroupMirror,
+            url: null,
+            member: null,
+            archive: null,
+            parts: null,
+            bundle: {
+                id,
+                files: b.files.map((f) => ({ path: f.path, sha256: f.sha256, size: f.size, cachePath: path.join(fdGroup, f.path), mirrorPath: fdGroupMirror ? path.join(fdGroupMirror, f.path) : null, url: `https://raw.githubusercontent.com${urlOf[f.path]}`, archive: -1 })), //archive為該檔所屬壓縮檔於bundle.archives之索引, -1為直接下載之檔(本組三檔皆為repo內之檔, 無壓縮檔)
+                archives: [],
+            },
+        }
+    }
+    //noValueInMessage, 訊息不帶值: 含組名; 不含任何sha256(64位十六進位字串)、各檔之大小、給定之路徑與清單之網址
+    let noValueInMessage = (err, dirs) => {
+        assert.strict.equal(err.message.includes('mseed2ascii'), true, err.message)
+        assert.strict.equal(/[0-9a-f]{64}/i.test(err.message), false, `message must not carry any sha256: ${err.message}`)
+        for (let f of b.files) {
+            for (let s of [f.sha256, `${f.size} bytes`, urlOf[f.path]]) {
+                assert.strict.equal(err.message.includes(s), false, `message must not carry [${s}]: ${err.message}`)
+            }
+        }
+        for (let d of dirs) {
+            assert.strict.equal(err.message.includes(d), false, `message must not carry [${d}]: ${err.message}`)
+        }
+    }
+
+    it(`T6: W_BIN_OFFLINE=1 without cache or mirror is E_OFFLINE_MISSING, whose err.missing lists the whole group (every file, sha256, size) and the group folder to place them in, and whose message carries no sha256 nor path (M6, O3, O5, D3, V20)`, async function() {
         process.env.W_BIN_OFFLINE = '1'
         process.env.W_BIN_CACHE = path.join(fdt, `shared${seq}`)
         let err = await ensureBins({ fetch: noNet })
@@ -249,25 +304,21 @@ describe(`ensureBins (bundle mseed2ascii)`, function() {
         assert.strict.equal(nNet, 0)
         assert.strict.equal(urls.length, 0)
 
-        //D3: 共用快取之結構為<W_BIN_CACHE>/<套件>/<組識別>/; 缺檔整組列出
-        let m = err.missing[0]
-        assert.strict.equal(m.name, 'mseed2ascii')
-        assert.strict.equal(m.cachePath, path.join(process.env.W_BIN_CACHE, manifest.pkg, id))
-        assert.strict.deepStrictEqual(m.bundle.files.map((v) => v.path).sort(), [...names].sort())
-        assert.strict.equal(m.bundle.id, id)
-        for (let f of b.files) {
-            let ef = m.bundle.files.find((v) => v.path === f.path)
-            assert.strict.equal(ef.sha256, f.sha256)
-            assert.strict.equal(ef.size, f.size)
-            for (let s of [f.path, f.sha256, String(f.size)]) {
-                assert.strict.equal(err.message.includes(s), true, `message should include [${s}]`)
-            }
+        //訊息(V20): 含組名與準備方法, 不含sha256、大小、路徑
+        noValueInMessage(err, [process.env.W_BIN_CACHE, fdt])
+        assert.strict.equal(err.message.includes('missing field of this error'), true, err.message)
+
+        //D3: 共用快取之結構為<W_BIN_CACHE>/<套件>/<組識別>/; 缺檔整組列出於err.missing[](逐檔sha256、大小、cachePath、url; 無鏡像時mirrorPath為null)
+        assert.strict.equal(Array.isArray(err.missing), true)
+        assert.strict.deepStrictEqual(err.missing.map(pickBundleMissing), [wantBundleMissing(path.join(process.env.W_BIN_CACHE, manifest.pkg, id), null)])
+        for (let f of err.missing[0].bundle.files) {
+            assert.strict.equal(f.missing, true, f.path) //無任何來源: 全組各檔皆未取得
         }
-        assert.strict.equal(err.message.includes(m.cachePath), true, `message should include the group folder`)
+        assert.strict.deepStrictEqual(err.missing[0].reasons, [])
         assert.strict.equal(fs.existsSync(process.env.W_BIN_CACHE), false) //離線缺檔不建任何夾
     })
 
-    it(`T6: with an offline mirror configured, the error also names the mirror group folder (M6, O3, O1)`, async function() {
+    it(`T6: with an offline mirror configured, err.missing names the mirror group folder and the mirror path of every file, and the message does not (M6, O3, O5, O1, V20)`, async function() {
         let fdMirror = path.join(fdt, `mirror${seq}`) //不存在之鏡像
         let err = await ensureBins({ fetch: noNet, cacheDir, mirror: fdMirror, offline: true })
             .then(() => null)
@@ -275,10 +326,14 @@ describe(`ensureBins (bundle mseed2ascii)`, function() {
         assert.strict.equal(err && err.code, 'E_OFFLINE_MISSING', err && err.message)
         let fpMirror = path.join(fdMirror, manifest.pkg, id)
         assert.strict.equal(err.missing[0].mirrorPath, fpMirror)
-        assert.strict.equal(err.message.includes(fpMirror), true)
+        noValueInMessage(err, [fdMirror, cacheDir, fdt])
+        assert.strict.deepStrictEqual(err.missing.map(pickBundleMissing), [wantBundleMissing(path.join(cacheDir, id), fpMirror)])
+        for (let f of err.missing[0].bundle.files) {
+            assert.strict.equal(f.missing, true, f.path) //鏡像無任何檔: 全組各檔皆未取得
+        }
     })
 
-    it(`T6: offline with a cache missing one file of the group lists the whole group, not just the missing file (M6, O3)`, async function() {
+    it(`T6: offline with a cache missing one file of the group lists the whole group in err.missing, not just the missing file (M6, O3, O5, V20)`, async function() {
         let fd = path.join(cacheDir, id)
         for (let f of b.files) {
             if (f.path !== 'cygz.dll') {
@@ -291,12 +346,11 @@ describe(`ensureBins (bundle mseed2ascii)`, function() {
             .catch((e) => e)
         assert.strict.equal(err && err.code, 'E_OFFLINE_MISSING', err && err.message)
         assert.strict.equal(nNet, 0)
-        for (let n of names) {
-            assert.strict.equal(err.message.includes(n), true, `message should list [${n}]`) //存在之檔亦列出(須整組備妥)
-        }
-        assert.strict.deepStrictEqual(err.missing[0].bundle.files.map((v) => v.path).sort(), [...names].sort()) //錯誤物件亦列全組
+        noValueInMessage(err, [fd, cacheDir, fdt])
+        //存在之檔亦列出(須整組備妥): 全組各檔之path、sha256、大小、cachePath皆在err.missing[](單檔之missing旗標之語意見經驗檔, 不斷言)
+        assert.strict.deepStrictEqual(err.missing.map(pickBundleMissing), [wantBundleMissing(fd, null)])
+        assert.strict.deepStrictEqual(err.missing[0].bundle.files.map((v) => v.path).sort(), [...names].sort())
         assert.strict.equal(err.missing[0].cachePath, fd) //應放之位置為組資料夾
-        assert.strict.equal(err.message.includes(fd), true)
         assert.strict.equal(fs.existsSync(path.join(fd, 'cygz.dll')), false) //離線失敗不補檔
     })
 

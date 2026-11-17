@@ -25,8 +25,8 @@
 | B4 | 首次使用才取得,不在 `postinstall` | D1 | 主函數;`package.json` 無 install 類 script |
 | B5 | 快取為內容定址之組資料夾 `<快取>/<組識別>/{exe,dll×2}`(`W_BIN_CACHE` 時 `<W_BIN_CACHE>/w-data-mseed/<組識別>/`),組識別為組內 `(path, sha256)` 排序後之雜湊(sha256sum 格式);各檔逐一校驗後整組原子發布,一檔不符整組重取;命中亦校驗;`W_BIN_CACHE`、`W_BIN_MIRROR`、`W_BIN_OFFLINE` 由 wsemi 統一讀取;`ensureBins()` 不轉傳 `floatingManifestUrl` | D3、D4、M6、O1~O3 | `src/ensureBins.mjs` |
 | B6 | 匯出 `ensureBins()`:`WDataMseed.ensureBins`(靜態屬性;主檔 default 匯出,**不加具名匯出**,UMD 形態不變) | D1、E2③ | `src/WDataMseed.mjs` 末段 |
-| B7 | 取不到執行檔之錯誤:主函數 reject 字串 `[<code>] <訊息>`(沿用本函數以字串 reject 之契約),`ensureBins()` 自身 reject 帶 `code` 之 `Error`;不再是字串 `can not find folder for mseed2ascii` | E3 | 主函數 |
-| B8 | 離線(`W_BIN_OFFLINE=1`)缺組內任一檔:`E_OFFLINE_MISSING`,訊息列全組各檔(名稱、sha256、大小)與應放之組資料夾(快取與鏡像) | O3、M6 | wsemi;`api-ensureBins` › T6 |
+| B7 | 取不到執行檔之錯誤:主函數 reject 字串 `[<code>] <訊息>`(沿用本函數以字串 reject 之契約),`ensureBins()` 自身 reject 帶 `code` 之 `Error`;不再是字串 `can not find folder for mseed2ascii`。離線缺檔(`E_OFFLINE_MISSING`)時字串之訊息只含組內各檔檔名與固定說明(離線準備請呼叫 `ensureBins()` 並讀 `err.missing[]` 取得放置位置),由 `strBinError` 組,不帶 sha256、路徑、網址、大小(V20,2026-11-18) | E3、V20 | 主函數;`api-WDataMseed` › 離線案 |
+| B8 | 離線(`W_BIN_OFFLINE=1`)缺組內任一檔:`E_OFFLINE_MISSING`,`err.missing[0]` 列全組各檔(path、sha256、大小、`cachePath`、`mirrorPath`、`url`)與應放之組資料夾(`cachePath`、有鏡像時 `mirrorPath`);訊息只含組名與準備方法,不含 sha256、大小與路徑(V20,wsemi 1.9.64 起,2026-11-18) | O3、O5、M6 | wsemi;`api-ensureBins` › T6、T5(竄改鏡像之離線案) |
 | B9 | 輸出夾(`opt.fdOutPre` 前綴之臨時夾)建於 `os.tmpdir()`(R-RUN R6),不在執行檔所在夾,亦不在呼叫端工作路徑;執行檔所在之快取夾不得新增任何檔 | §9 交換檔 | 主函數;`api-WDataMseed` 首案、R6 各案 |
 | B10 | 隨 GitHub 散布之第三方檔(`cygwin1.dll`、`cygz.dll`)其授權全文留在 repo `licenses/`(入 npm 包,作法同 w-mousekey);`licenses/README.md` 每個組內檔一列,載明檔內實際版本與文本來源;組內檔更新時須同步更新(測試自檔案內讀版本比對) | 第三方授權 | `licenses/`;`unit-binManifest` › `should keep the full license texts…` |
 
@@ -47,7 +47,7 @@
 | T3 首次整組下載→校驗→快取;第二次不連網;併發共用 | `api-ensureBins` › `T3`(2 案) |
 | T4 組內任一檔雜湊/大小不符→整組拒用、不留檔 | `api-ensureBins` › `T4`(3 檔 × 同大小異內容/截短/加長) |
 | T5 鏡像(本地資料夾)整組取得;組內一檔被竄改→拒用(連網補自 GitHub、離線 `E_OFFLINE_MISSING`) | `api-ensureBins` › `T5`(2 案) |
-| T6 離線缺檔之錯誤格式(全組列出;缺一檔亦列全組;鏡像路徑) | `api-ensureBins` › `T6`(3 案)、`api-WDataMseed` › 離線案 |
+| T6 離線缺檔之錯誤格式(`err.missing[]` 列全組;缺一檔亦列全組;鏡像路徑;訊息不帶 sha256 與路徑;主函數字串之固定說明;README 之放置位置範例) | `api-ensureBins` › `T6`(3 案)、`api-WDataMseed` › 離線案、`unit-binManifest` › README 案 |
 | T7 快取組內一檔被竄改/截短/刪除→整組重取;離線不回傳 | `api-ensureBins` › `T7`(2 案) |
 | T8 主幹模式 | 不適用(本套件為釘選模式) |
 | 不轉傳 `floatingManifestUrl`、套件根與 cwd 無關、靜態屬性且無具名匯出 | `api-ensureBins` › 後三案 |

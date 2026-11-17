@@ -5,7 +5,7 @@ import assert from 'assert'
 import cp from 'child_process'
 import { EventEmitter } from 'events'
 import wds from '../src/WDataMseed.mjs'
-import { setBinEnv } from './tools/binEnv.mjs'
+import { setBinEnv, readManifest, getBundle, bundleId } from './tools/binEnv.mjs'
 
 
 function isWindows() {
@@ -234,16 +234,32 @@ describe(`WDataMseed (executable obtained by ensureBins)`, function() {
     it(`rejects before creating any output folder when the executable can not be obtained offline (E3, O3), and never falls back to the files in the repo`, async function() {
         let bkCache = process.env.W_BIN_CACHE
         let bkMirror = process.env.W_BIN_MIRROR
-        process.env.W_BIN_CACHE = path.join(fdt, 'cache-empty')
-        process.env.W_BIN_MIRROR = path.join(fdt, 'mirror-empty')
+        let cacheEmpty = path.join(fdt, 'cache-empty')
+        let mirrorEmpty = path.join(fdt, 'mirror-empty')
+        process.env.W_BIN_CACHE = cacheEmpty
+        process.env.W_BIN_MIRROR = mirrorEmpty
         let n0 = fs.readdirSync(path.join(fdt, 'out')).length
         try {
             let err = await wds(fpHead, { fdOutPre })
                 .then(() => null, (e) => ({ e }))
-            assert.strict.equal(typeof err.e, 'string')
-            assert.strict.equal(err.e.includes('E_OFFLINE_MISSING'), true, err.e)
-            assert.strict.equal(err.e.includes('mseed2ascii.exe'), true, err.e)
-            assert.strict.equal(err.e.includes('cygwin1.dll'), true, err.e) //列出全組
+            assert.strict.equal(typeof err.e, 'string') //既有之reject型態為字串
+            //字串(V20): 以[錯誤碼]開頭, 只含缺哪些檔之檔名(檔案組列組內各檔)與固定說明(離線準備請呼叫ensureBins()並讀err.missing[]取得放置位置); 不帶sha256、路徑、網址、大小
+            let bd = getBundle(readManifest())
+            let names = bd.files.map((v) => v.path)
+            assert.strict.deepStrictEqual(names.slice().sort(), ['cygwin1.dll', 'cygz.dll', 'mseed2ascii.exe']) //列出全組
+            assert.strict.equal(err.e, `[E_OFFLINE_MISSING] offline: ${names.join(', ')} not in the cache or the mirror (the whole group is needed); to prepare offline, call ensureBins() and read err.missing[] for where to put the file(s)`)
+            assert.strict.equal(/[0-9a-f]{64}/i.test(err.e), false, err.e)
+            for (let s of [cacheEmpty, mirrorEmpty, fdt, 'https://', ' bytes']) {
+                assert.strict.equal(err.e.includes(s), false, `${s}: ${err.e}`)
+            }
+            //放置位置改由ensureBins()之err.missing[]取得(同環境): 組資料夾(快取與鏡像)與各檔之sha256
+            let errBins = await wds.ensureBins().then(() => null, (e) => e)
+            assert.strict.equal(errBins instanceof Error && errBins.code, 'E_OFFLINE_MISSING')
+            let m = errBins.missing[0]
+            let id = bundleId(bd.files)
+            assert.strict.equal(m.cachePath, path.join(cacheEmpty, 'w-data-mseed', id))
+            assert.strict.equal(m.mirrorPath, path.join(mirrorEmpty, 'w-data-mseed', id))
+            assert.strict.deepStrictEqual(m.bundle.files.map((v) => [v.path, v.sha256]), bd.files.map((f) => [f.path, f.sha256]))
         }
         finally {
             process.env.W_BIN_CACHE = bkCache

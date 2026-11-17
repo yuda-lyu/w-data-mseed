@@ -18,7 +18,7 @@
 ## 外部執行檔(R-BIN)現況
 
 - `mseed2ascii.exe`(2.6)、`cygwin1.dll`、`cygz.dll` **不隨 npm 包發布**;包內只有 `bin/manifest.json`(pinned,`commit` b296900a3b8ceccfbecec747955a28484299120f,一個檔案組 `mseed2ascii` 三檔共 3926268 位元組)。`mseed2ascii-2.6/` 內三檔已移除,三檔在 `bin/mseed2ascii/`(入 git;`.gitattributes` `bin/** binary`);`mseed2ascii-2.6/` 其餘(原始碼、`LICENSE` GPL-3、`doc/`、`libmseed/`、`說明.md`)留在 repo,`.npmignore` 排除整個資料夾。
-- 取得入口 `src/ensureBins.mjs`(wsemi `fsEnsureBins`);主函數每次呼叫經它取得快取內組資料夾之 exe;預設快取 `<套件根>/bin-cache/<組識別>/`,環境變數 `W_BIN_CACHE`、`W_BIN_MIRROR`、`W_BIN_OFFLINE`;`WDataMseed.ensureBins()` 供預先取得(靜態屬性)。
+- 取得入口 `src/ensureBins.mjs`(wsemi `fsEnsureBins`);主函數每次呼叫經它取得快取內組資料夾之 exe;預設快取 `<套件根>/bin-cache/<組識別>/`,環境變數 `W_BIN_CACHE`、`W_BIN_MIRROR`、`W_BIN_OFFLINE`;`WDataMseed.ensureBins()` 供預先取得(靜態屬性)。離線缺檔(`E_OFFLINE_MISSING`)之訊息不帶 sha256 與路徑,各檔 sha256、大小與組資料夾(`cachePath`/`mirrorPath`)在 `err.missing[]`;主函數 reject 之字串只列組內檔名與固定說明(`strBinError`);README〈External executable〉附讀 `err.missing` 之範例(wsemi 1.9.64 起,2026-11-18)。
 - 改 exe 之流程見 R-BIN-02(兩步提交)與 `mseed2ascii-2.6/說明.md`。
 - README:〈External executable〉(含所附工具與授權、原始碼位置)與〈Breaking changes: external executable〉兩節;授權指向 `licenses/`。
 - `licenses/`(入 git 與 npm 包):`Cygwin-CYGWIN_LICENSE.txt`、`Cygwin-LGPL-3.0.txt`、`Cygwin-newlib-COPYING.NEWLIB.txt`(Cygwin 源碼 tag `cygwin-3_3_4-release`)、`zlib-license.txt`(zlib v1.2.12 README 之 Copyright notice)、`README.md`(對照表與來源網址);`mseed2ascii` 之 GPL-3 在 `mseed2ascii-2.6/LICENSE`。

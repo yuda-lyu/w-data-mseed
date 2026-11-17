@@ -4,6 +4,8 @@ import os from 'os'
 import process from 'process'
 import get from 'lodash-es/get.js'
 import map from 'lodash-es/map.js'
+import each from 'lodash-es/each.js'
+import isArray from 'lodash-es/isArray.js'
 import filter from 'lodash-es/filter.js'
 import size from 'lodash-es/size.js'
 import drop from 'lodash-es/drop.js'
@@ -31,6 +33,38 @@ function isWindows() {
 //rejectKeep, 輸出夾已建立後之reject: 該夾會保留供查找, 故於訊息附上其絕對路徑(夾在os.tmpdir()下, 呼叫端不知其位置)
 function rejectKeep(msg, fdOut) {
     return Promise.reject(`${msg}\noutput folder kept for inspection: ${fdOut}`)
+}
+
+
+//strBinError, 取得外部執行檔失敗時reject之字串(既有契約為字串, 不改型別): 以[錯誤碼]開頭
+//訊息不帶路徑、sha256、網址與大小(輸入參數之檢測機制V20): 離線缺檔(E_OFFLINE_MISSING)時只含缺哪些檔之檔名(檔案組列組內各檔)與固定說明(離線準備請呼叫ensureBins()並讀err.missing[]取得放置位置), 其餘錯誤碼沿用ensureBins之說明(固定詞彙, 不含值)
+function strBinError(err) {
+    let code = get(err, 'code')
+    let head = isestr(code) ? `[${code}] ` : ''
+    if (code === 'E_OFFLINE_MISSING') {
+        let names = []
+        let bundle = false
+        each(get(err, 'missing', []), (m) => {
+            let files = get(m, ['bundle', 'files'])
+            if (isArray(files)) {
+                bundle = true
+                each(files, (f) => {
+                    let p = get(f, 'path', '')
+                    if (isestr(p)) {
+                        names.push(p)
+                    }
+                })
+            }
+            else {
+                let nm = get(m, 'name', '')
+                if (isestr(nm)) {
+                    names.push(nm)
+                }
+            }
+        })
+        return `${head}offline: ${names.length > 0 ? names.join(', ') : 'the file(s)'} not in the cache or the mirror${bundle ? ' (the whole group is needed)' : ''}; to prepare offline, call ensureBins() and read err.missing[] for where to put the file(s)`
+    }
+    return `${head}${isestr(get(err, 'message')) ? err.message : String(err)}`
 }
 
 
@@ -121,7 +155,7 @@ async function WDataMseed(fp, opt = {}) {
             prog = get(r, ['bundles', 'mseed2ascii', 'files', fnExe], '')
         })
         .catch((err) => {
-            errBin = `${isestr(get(err, 'code')) ? `[${err.code}] ` : ''}${isestr(get(err, 'message')) ? err.message : String(err)}`
+            errBin = strBinError(err)
         })
     if (errBin) {
         return Promise.reject(errBin)

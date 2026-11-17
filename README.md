@@ -76,7 +76,20 @@ The three files form one **bundle** (`mseed2ascii`): they are fetched, checked a
 - **Environment variables** (read by `ensureBins()` and by every call that converts):
   - `W_BIN_CACHE=<folder>`: keep the cache in `<folder>/w-data-mseed/<bundle id>/` instead of the package folder (use it when `node_modules` is read-only; several packages can share one folder).
   - `W_BIN_MIRROR=<folder or http(s) base URL>`: look in the mirror before GitHub. The layout is `<mirror>/w-data-mseed/<bundle id>/<file>`. A file from the mirror is checked against the manifest like any other, so a mirror cannot supply a different file; a file that does not match is refused and the next source is tried.
-  - `W_BIN_OFFLINE=1`: never connect to GitHub; use only the cache and the mirror. When a file of the bundle is missing the call rejects with `code: 'E_OFFLINE_MISSING'`, and the message lists the whole bundle (every file with its SHA-256 and size) and the exact cache and mirror folders where it must be put.
+  - `W_BIN_OFFLINE=1`: never connect to GitHub; use only the cache and the mirror. When a file of the bundle is missing the call rejects with `code: 'E_OFFLINE_MISSING'`. The message only says that the bundle is missing and how to prepare it (it carries no SHA-256 and no path); the whole bundle (every file with its SHA-256 and size) and the exact cache and mirror folders where it must be put are in `err.missing[]` of the error (see the next item).
+- **Where to put the files when they are missing offline**: read them from `err.missing[]` of the `Error` that `ensureBins()` rejects with. The item `err.missing[0]` is the bundle: `cachePath` is the bundle folder in the cache, `mirrorPath` is the bundle folder in the mirror (`null` when no mirror is set), and `bundle.files[]` lists every file of the bundle with `path`, `sha256`, `size`, `cachePath`, `mirrorPath` and `url`. Put the whole bundle in `cachePath` or `mirrorPath`:
+
+  ```alias
+  try {
+      await WDataMseed.ensureBins()
+  }
+  catch (err) {
+      if (err.code === 'E_OFFLINE_MISSING') {
+          console.log(err.missing) //[ { name: 'mseed2ascii', cachePath, mirrorPath, bundle: { id, files: [ { path, sha256, size, cachePath, mirrorPath, url, ... } ] }, ... } ]
+      }
+  }
+  ```
+
 - **Offline deployment** (a machine that cannot reach GitHub):
   1. On a machine with network access set `W_BIN_CACHE` to an empty folder and run a script that calls `ensureBins()` once:
 
@@ -88,7 +101,7 @@ The three files form one **bundle** (`mseed2ascii`): they are fetched, checked a
 
      (PowerShell: `$env:W_BIN_CACHE='D:\mirror'; node prepare.mjs`.) The folder now holds `w-data-mseed/<bundle id>/` with the three files.
   2. Copy the whole folder to the offline machine and set `W_BIN_MIRROR=<that folder>` (and `W_BIN_OFFLINE=1` to forbid any network access). The first use copies the verified bundle into the local cache.
-- **A failure to obtain the executable** makes `WDataMseed()` reject with a string that starts with the error code, for example `[E_OFFLINE_MISSING] fsEnsureBins[w-data-mseed]: …`; `ensureBins()` itself rejects with an `Error` that has a `code` (`E_OFFLINE_MISSING`, `E_HASH_MISMATCH`, `E_SIZE_MISMATCH`, `E_HTTP`, `E_NETWORK`, …).
+- **A failure to obtain the executable** makes `WDataMseed()` reject with a string that starts with the error code. For a missing bundle offline it is `[E_OFFLINE_MISSING] offline: <the file names of the bundle> not in the cache or the mirror (the whole group is needed); to prepare offline, call ensureBins() and read err.missing[] for where to put the file(s)` (no SHA-256, path or URL in it); `ensureBins()` itself rejects with an `Error` that has a `code` (`E_OFFLINE_MISSING`, `E_HASH_MISMATCH`, `E_SIZE_MISMATCH`, `E_HTTP`, `E_NETWORK`, …) and, for `E_OFFLINE_MISSING`, a `missing` array.
 
 #### Included tool and license
 
