@@ -3,7 +3,7 @@
 本檔只記現況(各功能做到哪裡、對應之規則帳本條目與測試檔、已知缺口與待辦、最近一次驗證或發布之版本),不寫過程;過程與教訓見 `sgud/exp/experience.md`,規則細節見 `sgud/rule/rulebook.md`。
 
 - 套件版本:`package.json` 為 1.0.38(本輪未改);發布與版號由維護者與主控決定。
-- 依賴現況:`wsemi ^1.9.33`(2026-10-30 第 179 項自 `^1.9.30` 升:`execProcess` 之 `opt.cwd` 自 1.9.33 起;檔案組〔`bundles`〕自 1.9.30 起),`node_modules` 內為 1.9.33;`w-package-tools ^1.1.21`(已為最新)。
+- 依賴現況:`wsemi ^1.9.66`(2026-11-18 自 `^1.9.65` 升:`execProcess` 之原生錯誤改為固定詞彙加錯誤碼,見 R-RUN R4;`execProcess` 之 `opt.cwd` 自 1.9.33 起;檔案組〔`bundles`〕自 1.9.30 起),`node_modules` 內為 1.9.66;`w-package-tools ^1.1.28`。
 
 ## 功能與規則、測試對照
 

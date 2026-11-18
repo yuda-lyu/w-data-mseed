@@ -299,16 +299,19 @@ describe(`WDataMseed (executable obtained by ensureBins)`, function() {
     let lineKept = (fd) => `output folder kept for inspection: ${fd}`
 
     it(`rejects with spawn[code] when the child process can not be created (throws synchronously or emits error)`, async function() {
+        //wsemi >= 1.9.66: 帶錯誤碼之原生錯誤, 其訊息改為固定詞彙`operation failed (code <碼>)`, 不再帶原生訊息原文(boom、not found); 錯誤碼與輸出夾保留之說明(末行)仍在
         let r1 = await rejectWith(() => {
             throw Object.assign(new Error('boom'), { code: 'EPERM' })
         })
-        assert.strict.equal(r1.e, `spawn[EPERM]:\nboom\n${lineKept(r1.fd)}`)
+        assert.strict.equal(r1.e, `spawn[EPERM]:\noperation failed (code EPERM)\n${lineKept(r1.fd)}`)
+        assert.strict.equal(r1.e.includes('boom'), false, r1.e) //原生訊息原文不外帶
 
         let r2 = await rejectWith(() => fakeChild((ee) => {
             ee.emit('error', Object.assign(new Error('not found'), { code: 'ENOENT' }))
             ee.emit('close', -2) //error之後node可能仍發出close, 不得改變結果
         }))
-        assert.strict.equal(r2.e, `spawn[ENOENT]:\nnot found\n${lineKept(r2.fd)}`) //cwd(輸出夾)存在, 故訊息不改指cwd
+        assert.strict.equal(r2.e, `spawn[ENOENT]:\noperation failed (code ENOENT)\n${lineKept(r2.fd)}`) //cwd(輸出夾)存在, 故訊息不改指cwd
+        assert.strict.equal(r2.e.includes('not found'), false, r2.e) //原生訊息原文不外帶
     })
 
     it(`rejects with code[N] and the output of the child when it exits with a non-zero code and writes no file`, async function() {

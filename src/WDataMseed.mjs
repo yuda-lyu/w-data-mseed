@@ -75,7 +75,7 @@ function strBinError(err) {
  *
  * 轉檔之暫存輸出夾建於作業系統暫存夾os.tmpdir()下(夾名為`${fdOutPre}<時間>-<亂數>`)，呼叫端之工作路徑內不會出現任何檔。轉檔成功且readWithData=true時刪除該夾；失敗時保留該夾供查找，reject之訊息末行附其絕對路徑(`output folder kept for inspection: <路徑>`)
  *
- * 轉檔子行程由wsemi之execProcess(spawn模式)啟動，以其cwd選項指向輸出夾(mseed2ascii之輸出檔寫在工作路徑)，不改本行程之process.cwd()，故多個轉換可併發。無輸出檔時之reject字串依來源為：離開碼非0為`code[N]:\n輸出`，無法啟動為`spawn[錯誤碼]:\n訊息`(輸出夾於啟動前已不存在時為`spawn[ENOENT]:\ncwd is not an existing folder: <輸出夾>`)，離開碼為0而無輸出檔(如輸入非miniSEED)為mseed2ascii之輸出訊息
+ * 轉檔子行程由wsemi之execProcess(spawn模式)啟動，以其cwd選項指向輸出夾(mseed2ascii之輸出檔寫在工作路徑)，不改本行程之process.cwd()，故多個轉換可併發。無輸出檔時之reject字串依來源為：離開碼非0為`code[N]:\n輸出`，無法啟動為`spawn[錯誤碼]:\noperation failed (code 錯誤碼)`(wsemi 1.9.66起帶錯誤碼之原生錯誤改為此固定詞彙，不再帶原生訊息原文；輸出夾於啟動前已不存在時為`spawn[ENOENT]:\ncwd is not an existing folder: <輸出夾>`)，離開碼為0而無輸出檔(如輸入非miniSEED)為mseed2ascii之輸出訊息
  *
  * @param {String} fp 輸入檔案路徑字串
  * @param {Object} [opt={}] 輸入設定物件，預設{}
@@ -202,7 +202,7 @@ async function WDataMseed(fp, opt = {}) {
     // console.log('cmd', cmd)
 
     //execProcess, 以cwd指向輸出夾(mseed2ascii預設輸出檔案是在工作路徑, 不指定則輸出檔會出現在專案下), 不改本行程之工作路徑, 故多個轉換併發時不會互相干擾
-    //resolve為stdout與stderr合併之輸出(mseed2ascii之訊息輸出於stderr), 離開碼為0即resolve; reject為字串`code[離開碼]:\n輸出`或`spawn[錯誤碼]:\n訊息`(輸出夾不存在時為`spawn[ENOENT]:\ncwd is not an existing folder: <夾>`)
+    //resolve為stdout與stderr合併之輸出(mseed2ascii之訊息輸出於stderr), 離開碼為0即resolve; reject為字串`code[離開碼]:\n輸出`或`spawn[錯誤碼]:\noperation failed (code 錯誤碼)`(wsemi 1.9.66起之固定詞彙; 輸出夾不存在時為`spawn[ENOENT]:\ncwd is not an existing folder: <夾>`)
     let msgExe = ''
     await execProcess(prog, cmd, { cwd: fdOut })
         .then((r) => {

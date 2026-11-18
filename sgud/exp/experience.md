@@ -2,6 +2,11 @@
 
 本檔為執行工作時特有之累積經驗,留給後續之嘗試、執行與判斷,由agent自行編列、擴充與維護.過長時抽出舊者為`experience_<年月日>.md`,並於本檔註明何時抽出.
 
+## wsemi 1.9.66 之 `execProcess` 固定詞彙(2026-11-18)
+
+- 帶錯誤碼之原生錯誤(同步拋出、`error` 事件)之 reject 由 `spawn[碼]:\n原生訊息` 改為 `spawn[碼]:\noperation failed (code 碼)`(實測 `./tmp` 探測腳本:假 `cp.spawn` 拋 `{code:'EPERM',message:'boom'}` → `spawn[EPERM]:\noperation failed (code EPERM)`;`error` 事件 `{code:'ENOENT',message:'not found'}`(其後 `close(-2)`)→ `spawn[ENOENT]:\noperation failed (code ENOENT)`;真 spawn 找不到執行檔亦同)。**無錯誤碼者(無 `code` 之 Error、拋出字串)不變**,仍為 `spawn[UNKNOWN]:\n原文`;cwd 不存在仍為 `spawn[ENOENT]:\ncwd is not an existing folder: <cwd>`。
+- 測試不得再把假子行程之原生訊息當預期值;斷言「錯誤碼＋固定詞彙＋輸出夾保留末行」全文相等,另斷言原生訊息(`boom`、`not found`)不外帶。升 `^1.9.66` 之前,舊期望於 1.9.66 下紅於 `api-WDataMseed.test.mjs` 該案第一個斷言(1.9.65 全綠 38 案)。
+
 ## 第 179 項(2026-10-30;`runExe` 改回 wsemi `execProcess`)
 
 - **`execProcess(prog, args, { cwd })` 與舊 `runExe` 之對應**:離開碼 0 → resolve「stdout+stderr 依到達順序合併」之字串(即舊 `text`);離開碼非 0 → reject `code[N]:\n輸出`;無法啟動 → reject `spawn[錯誤碼]:\n訊息`。故主檔以 `.then((r) => { msgExe = r }).catch((err) => { errTemp = err })` 取代 `{ err, text }`,後段 `errTemp || msgExe` 不變,對外之成功與失敗字串皆與舊版相同(假子行程案改為全文相等後在舊碼上亦綠,證明形狀未變)。
