@@ -331,11 +331,11 @@ describe(`WDataMseed (executable obtained by ensureBins)`, function() {
         assert.strict.equal(r.e, `Error reading x: No SEED data detected\n\n${lineKept(r.fd)}`)
     })
 
-    it(`rejects with spawn[ENOENT] naming the cwd when the output folder is gone before the child starts, and never changes process.cwd()`, async function() {
+    it(`rejects with spawn[ENOENT] and the fixed cwd wording (no cwd path from execProcess) when the output folder is gone before the child starts, and never changes process.cwd()`, async function() {
         let before = outDirs()
         let cwdSpawn = ''
         try {
-            //啟動前使輸出夾消失(真spawn以不存在之cwd啟動): execProcess把ENOENT改指cwd, 不指向執行檔
+            //啟動前使輸出夾消失(真spawn以不存在之cwd啟動): execProcess把ENOENT改指cwd(固定詞彙, wsemi >= 1.9.70不帶路徑), 不指向執行檔
             cp.spawn = function(prog, args, opt, ...rest) {
                 cwdSpawn = opt.cwd
                 fs.rmSync(opt.cwd, { recursive: true, force: true })
@@ -347,7 +347,12 @@ describe(`WDataMseed (executable obtained by ensureBins)`, function() {
             assert.strict.equal(typeof err.e, 'string')
             assert.strict.equal(path.isAbsolute(cwdSpawn), true)
             assert.strict.equal(fs.existsSync(cwdSpawn), false)
-            assert.strict.equal(err.e.startsWith(`spawn[ENOENT]:\ncwd is not an existing folder: ${cwdSpawn}\n`), true, err.e)
+            //wsemi >= 1.9.70: cwd不存在之訊息為固定詞彙`invalid cwd: must be an existing folder`, 不帶cwd路徑(execProcess之部分); 末行`output folder kept for inspection: <夾>`為本庫自附之保留夾說明(呼叫端找輸出夾用), 不屬execProcess之訊息
+            let lines = err.e.split('\n')
+            assert.strict.equal(lines.length, 3, err.e)
+            assert.strict.equal(lines.slice(0, 2).join('\n'), `spawn[ENOENT]:\ninvalid cwd: must be an existing folder`, err.e) //錯誤碼ENOENT與固定詞彙
+            assert.strict.equal(lines.slice(0, 2).join('\n').includes(cwdSpawn), false, err.e) //execProcess之訊息不含cwd路徑(V20)
+            assert.strict.equal(lines[2], lineKept(cwdSpawn), err.e) //末行為本庫之保留夾說明, 指向該輸出夾
             assert.strict.equal(err.e.includes('mseed2ascii.exe'), false, err.e) //不指向執行檔
             assert.strict.equal(process.cwd(), cwdOri)
         }

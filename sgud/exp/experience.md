@@ -2,9 +2,14 @@
 
 本檔為執行工作時特有之累積經驗,留給後續之嘗試、執行與判斷,由agent自行編列、擴充與維護.過長時抽出舊者為`experience_<年月日>.md`,並於本檔註明何時抽出.
 
+## wsemi 1.9.70 之 cwd 不存在訊息不帶路徑(2026-11-19)
+
+- 實測(`./tmp` 探測腳本,`execProcess(prog, ['--version'], { cwd: <不存在之夾> })`,prog 為 `node` 與真 `mseed2ascii.exe` 皆同):reject 為 `spawn[ENOENT]:\ninvalid cwd: must be an existing folder`,不含 cwd 路徑、不含執行檔路徑;1.9.69 為 `spawn[ENOENT]:\ncwd is not an existing folder: <cwd>`。
+- 本庫主函數於輸出夾已建立後之 reject 末行恆附 `output folder kept for inspection: <夾>`(本庫自附,供呼叫端找夾),故整段 `err.e` 仍含該夾路徑;「不含 cwd 路徑」之斷言只能對 `execProcess` 之部分(去末行)下,不可對整段下。測試以 `split('\n')` 取前兩行全文相等、斷言其不含 `cwdSpawn`,末行與 `lineKept(cwdSpawn)` 全文相等。升 `^1.9.70` 後、改期望前,該案紅於第一個比對斷言(其餘 12 案綠)。
+
 ## wsemi 1.9.66 之 `execProcess` 固定詞彙(2026-11-18)
 
-- 帶錯誤碼之原生錯誤(同步拋出、`error` 事件)之 reject 由 `spawn[碼]:\n原生訊息` 改為 `spawn[碼]:\noperation failed (code 碼)`(實測 `./tmp` 探測腳本:假 `cp.spawn` 拋 `{code:'EPERM',message:'boom'}` → `spawn[EPERM]:\noperation failed (code EPERM)`;`error` 事件 `{code:'ENOENT',message:'not found'}`(其後 `close(-2)`)→ `spawn[ENOENT]:\noperation failed (code ENOENT)`;真 spawn 找不到執行檔亦同)。**無錯誤碼者(無 `code` 之 Error、拋出字串)不變**,仍為 `spawn[UNKNOWN]:\n原文`;cwd 不存在仍為 `spawn[ENOENT]:\ncwd is not an existing folder: <cwd>`。
+- 帶錯誤碼之原生錯誤(同步拋出、`error` 事件)之 reject 由 `spawn[碼]:\n原生訊息` 改為 `spawn[碼]:\noperation failed (code 碼)`(實測 `./tmp` 探測腳本:假 `cp.spawn` 拋 `{code:'EPERM',message:'boom'}` → `spawn[EPERM]:\noperation failed (code EPERM)`;`error` 事件 `{code:'ENOENT',message:'not found'}`(其後 `close(-2)`)→ `spawn[ENOENT]:\noperation failed (code ENOENT)`;真 spawn 找不到執行檔亦同)。**無錯誤碼者(無 `code` 之 Error、拋出字串)不變**,仍為 `spawn[UNKNOWN]:\n原文`;cwd 不存在於 1.9.66 仍為 `spawn[ENOENT]:\ncwd is not an existing folder: <cwd>`(1.9.70 起改為不帶路徑,見上節)。
 - 測試不得再把假子行程之原生訊息當預期值;斷言「錯誤碼＋固定詞彙＋輸出夾保留末行」全文相等,另斷言原生訊息(`boom`、`not found`)不外帶。升 `^1.9.66` 之前,舊期望於 1.9.66 下紅於 `api-WDataMseed.test.mjs` 該案第一個斷言(1.9.65 全綠 38 案)。
 
 ## 第 179 項(2026-10-30;`runExe` 改回 wsemi `execProcess`)
