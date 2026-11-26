@@ -2,8 +2,8 @@
 
 本檔只記現況(各功能做到哪裡、對應之規則帳本條目與測試檔、已知缺口與待辦、最近一次驗證或發布之版本),不寫過程;過程與教訓見 `sgud/exp/experience.md`,規則細節見 `sgud/rule/rulebook.md`。
 
-- 套件版本:`package.json` 為 1.0.38(本輪未改);發布與版號由維護者與主控決定。
-- 依賴現況:`wsemi ^1.9.70`(2026-11-19 自 `^1.9.69` 升:`execProcess` 之 cwd 不存在訊息改為不帶路徑之固定詞彙 `invalid cwd: must be an existing folder`,見 R-RUN R5;2026-11-18 自 `^1.9.65` 升 1.9.66:原生錯誤改為固定詞彙加錯誤碼,見 R-RUN R4;`execProcess` 之 `opt.cwd` 自 1.9.33 起;檔案組〔`bundles`〕自 1.9.30 起),`node_modules` 內為 1.9.70;`w-package-tools ^1.1.28`。
+- 套件版本:`package.json` 為 1.0.74(本輪未改);發布與版號由維護者與主控決定。
+- 依賴現況:`wsemi ^1.9.80`(2026-11-26 自 `^1.9.79` 升:列舉函數第 2 參數改為設定物件、未給層數即窮舉,輸出夾列舉改為 `{ levelLimit: 1 }`,見 R-LIST-LEVEL;更早:2026-11-19 自 `^1.9.69` 升 1.9.70:`execProcess` 之 cwd 不存在訊息改為不帶路徑之固定詞彙 `invalid cwd: must be an existing folder`,見 R-RUN R5;2026-11-18 自 `^1.9.65` 升 1.9.66:原生錯誤改為固定詞彙加錯誤碼,見 R-RUN R4;`execProcess` 之 `opt.cwd` 自 1.9.33 起;檔案組〔`bundles`〕自 1.9.30 起),`node_modules` 內為 1.9.80;`w-package-tools ^1.1.31`。
 
 ## 功能與規則、測試對照
 
@@ -13,6 +13,7 @@
 | 轉檔子行程以 wsemi `execProcess(..., { cwd })` 指定輸出夾,不改 `process.cwd()`,併發互不干擾;輸出夾於啟動前消失時 reject 指向 cwd | R-RUN R1~R5 | `api-WDataMseed`(含全文相等之失敗訊息案、cwd 不存在案) | 完成(bin-mseed,2026-10-29;第 179 項改用 `execProcess`,2026-10-30,待主控複審與發布) |
 | 臨時輸出夾建於 `os.tmpdir()`;失敗保留夾且 reject 訊息附其絕對路徑 | R-RUN R4、R6 | `api-WDataMseed`(R6 四案) | 完成(bin-mseed2,2026-10-29) |
 | 第三方檔(`cygwin1.dll` Cygwin 3.3.4-2、`cygz.dll` zlib 1.2.12)授權全文留 repo | R-BIN B10 | `unit-binManifest` › `should keep the full license texts…` | 完成(bin-mseed2,2026-10-29) |
+| 轉檔後僅列舉輸出夾第 1 層:wsemi 1.9.80 起第 2 參數為設定物件,改為 `fsTreeFolder(fdOut, { levelLimit: 1 })`,輸出夾下子夾內之檔不回傳(2026-11-26) | R-LIST-LEVEL L1、L2 | `api-WDataMseedLevel`(僅 Windows;最近一次全套 39 passing／0 failing,2026-11-26) | 完成 |
 | **外部執行檔組 `mseed2ascii`(exe＋2 dll)之存放/下載/校驗/離線(D 類、檔案組、制式規格)** | **R-BIN** | **`unit-binManifest`(T1、T2、清單形狀;與平台無關)、`api-ensureBins`(T3~T7、環境變數、套件根、靜態屬性;與平台無關)、`api-WDataMseed`(主函數整合;僅 Windows);功能測試之執行檔由 `test/tools/binEnv.mjs` 供** | **完成(bin-mseed,2026-10-29),待主控跑全套與發布** |
 
 ## 外部執行檔(R-BIN)現況

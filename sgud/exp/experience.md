@@ -2,6 +2,13 @@
 
 本檔為執行工作時特有之累積經驗,留給後續之嘗試、執行與判斷,由agent自行編列、擴充與維護.過長時抽出舊者為`experience_<年月日>.md`,並於本檔註明何時抽出.
 
+## wsemi 1.9.80 列舉函數第 2 參數改為 opt(R-LIST-LEVEL,2026-11-26)
+
+- **本函數實際不會產生子夾,層數只能靠注入證明**:mseed2ascii 只平放輸出,第 1 層與窮舉之結果在真實情形相同。`api-WDataMseedLevel` 於輸出夾「首次被 `fs.readdirSync` 讀取」時(wsemi 以 Node 內建 `fs` 物件注入,測試端 `import fs from 'fs'` 為同一物件,暫時換掉 `readdirSync`、`finally`/`after` 還原)於其內建 `sub/n1.csv`、`sub/deeper/n2.csv`,再斷言回傳不含它們、`readdirSync` 沒讀 `sub`;並先做一次不注入之對照轉檔,取得 exe 實際輸出之檔名作預期值,且斷言注入之檔確實存在於磁碟(證明斷言有鑑別力)。回傳會含 `sub` 資料夾項目本身(`fsTreeFolder` 於第 1 層即列出資料夾),測試不釘住該項。
+- **`try/catch {}` 吞掉列舉錯誤**:`src/WDataMseed.mjs` 之 `fsTreeFolder` 呼叫包在空 `catch` 內,舊式數字(升 1.9.80 後拋 `invalid opt`)不會直接現形,而是 `rs=[]` → 走「無輸出檔」之 reject,訊息像是 exe 沒輸出;任何轉檔測試都會因此紅,但訊息誤導。層數寫法之任何偏差,以 `api-WDataMseedLevel` 與既有 `api-WDataMseed` 共同守住。
+- **修前紅形狀**:升 1.9.80 後尚未改 src 時,省略第 2 參數為窮舉,新測試紅於 `deepStrictEqual`(多出 `deeper`、`n1.csv`、`n2.csv`)。
+- **變異驗證**(鏡像根 `tmp/<案名>/mirror`,只複製檔案〔`src/`、`bin/`、`package.json`、`test/tools/`、`test/g.mseed`、新測試〕,不建目錄連結;`pkgRoot` 由 `import.meta.url` 推得為鏡像根,故鏡像須帶 `bin/manifest.json` 與 `bin/mseed2ascii/`):對照(原碼)綠;改回舊式數字、省略、`{ levelLimit: 2 }`、`{ levelLimit: null }`、`{}`、`{ levelLimit: 0 }` 共 6 項皆轉紅。
+
 ## wsemi 1.9.70 之 cwd 不存在訊息不帶路徑(2026-11-19)
 
 - 實測(`./tmp` 探測腳本,`execProcess(prog, ['--version'], { cwd: <不存在之夾> })`,prog 為 `node` 與真 `mseed2ascii.exe` 皆同):reject 為 `spawn[ENOENT]:\ninvalid cwd: must be an existing folder`,不含 cwd 路徑、不含執行檔路徑;1.9.69 為 `spawn[ENOENT]:\ncwd is not an existing folder: <cwd>`。

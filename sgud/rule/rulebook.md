@@ -6,8 +6,9 @@
 
 - R-BIN 外部執行檔(mseed2ascii.exe 與兩個 dll 之檔案組)之存放、下載、校驗與離線:本檔下節.
 - R-RUN 轉檔子行程之工作路徑:本檔下下節.
+- R-LIST-LEVEL 輸出夾列舉層數(wsemi 列舉函數須以設定物件明寫層數意圖):本檔末節.
 
-## R-BIN 外部執行檔 mseed2ascii 之存放、下載、校驗與離線(2026-10-29 立;bin-mseed;D 類、檔案組;制式規格正本:`C:\opensrcOper\dspec\外部執行檔之存放下載校驗與離線.md`,本節只摘要本套件之落實,規則不得與正本偏離)
+## R-BIN 外部執行檔 mseed2ascii 之存放、下載、校驗與離線(2026-10-29 立;bin-mseed;D 類、檔案組;制式規格正本:主控 dspec 之〈外部執行檔之存放下載校驗與離線〉,本節只摘要本套件之落實,規則不得與正本偏離)
 
 ### R-BIN-00 單一擁有者
 
@@ -71,3 +72,12 @@
 | R4 | 無輸出檔時 reject 之值為字串:離開碼非 0 為 `code[N]:\n輸出`,無法啟動為 `spawn[錯誤碼]:\noperation failed (code 錯誤碼)`(`execProcess` 之格式;wsemi ≥ 1.9.66 起帶錯誤碼之原生錯誤改為此固定詞彙,**不得**再斷言原生訊息原文;測試須同時斷言錯誤碼與輸出夾保留之末行,並斷言原生訊息不外帶),離開碼為 0 而無輸出檔(如輸入非 miniSEED)為 mseed2ascii 之輸出訊息(`execProcess` resolve 之 stdout+stderr 合併字串);輸出夾保留供查找,**訊息末行附其絕對路徑**(`output folder kept for inspection: <路徑>`,R6;輸出夾已建立後之三種 reject〔`fsCopyFile error`、`fpIn is not file`、無輸出檔〕皆經 `rejectKeep`) | `api-WDataMseed` › `rejects with the message of mseed2ascii…`、`rejects with spawn[code]…`、`rejects with code[N]…`、`rejects with the output of the child when it exits with code 0…`(皆全文相等斷言) |
 | R5 | 輸出夾於子行程啟動前已不存在時,reject 為 `spawn[ENOENT]:\ninvalid cwd: must be an existing folder` 加本庫自附之末行 `output folder kept for inspection: <夾>`(`execProcess` 之固定詞彙,wsemi 1.9.70 起不帶 cwd 路徑〔V20〕;1.9.69 以前為 `cwd is not an existing folder: <夾>`),**不得**指向執行檔(node 原訊息 `spawn <exe> ENOENT`),且 `execProcess` 之部分不含 cwd 路徑;已廢:wsemi 1.9.30 無 `cwd` 選項而有自有 `runExe`(2026-10-30 第 179 項改回 `execProcess`,`runExe` 已刪) | `api-WDataMseed` › `rejects with spawn[ENOENT] and the fixed cwd wording (no cwd path from execProcess) when the output folder is gone…`(測試於 `cp.spawn` 攔截內先刪夾再啟動真子行程) |
 | R6 | 臨時輸出夾(`path.resolve(os.tmpdir(), fdOutPre + 時間戳 + '-' + 亂數)`,`os.tmpdir()` 於每次呼叫時取值)建於作業系統暫存夾,呼叫端工作路徑內不出現任何檔;成功且 `readWithData=true` 刪除該夾;失敗保留並於 reject 訊息附其絕對路徑。`fdOutPre` 仍為夾名前綴(預設 `_`;相對值落在 `os.tmpdir()`,絕對值照給);不得再以 `path.resolve()`(工作路徑)為基底 | `src/WDataMseed.mjs` `rejectKeep`、`fdOut`;`api-WDataMseed` › `works when loaded and called from another working directory…`、`fails from another working directory…`、`creates the output folder in os.tmpdir()…`、`names the absolute path of the kept output folder in every reject…`(測試以 `TEMP`/`TMP` 把 `os.tmpdir()` 導向 `test/_tmp/WDataMseed/` 下專用夾) |
+
+## R-LIST-LEVEL 輸出夾列舉層數(2026-11-26 立;wsemi 1.9.80)
+
+| 編號 | 規則 | 落點 / 測試 |
+|---|---|---|
+| L1 | wsemi 1.9.80 起,`fsTreeFolder`、`fsTreeFolderWithHash`、`fsGetFilesInFolder`、`fsGetFilesWithHashInFolder`、`fsGetFoldersInFolder`(及各 `*Core`)之第 2 參數為設定物件 `opt = {}`:`opt.levelLimit` 為有效正整數才限層,**未給即窮舉全部層級**(舊版第 2 參數為層數、預設 1 層);第 2 參數給了而非物件(舊寫法之數字)拋 `invalid opt: must be an object`,第 3 個引數有給拋 `invalid arguments: must be fd and opt only`。本套件呼叫這類函數時,第 2 參數一律為物件且明寫層數意圖:要第 1 層者寫 `{ levelLimit: 1 }`;本意窮舉者可省略但須在呼叫處註明為刻意窮舉;不寫舊式數字,不依賴省略即第 1 層 | 盤點指令:`git grep -nE "\b(fsTreeFolder\|fsTreeFolderWithHash\|fsGetFilesInFolder\|fsGetFilesWithHashInFolder\|fsGetFoldersInFolder)(Core)?\s*\(" -- . ':!dist' ':!docs'` |
+| L2 | 轉檔後僅列舉輸出夾(`fdOut`)第 1 層:`fsTreeFolder(fdOut, { levelLimit: 1 })`(`src/WDataMseed.mjs`,1 站,已套)。mseed2ascii 只於工作路徑平放輸出,輸出夾下之子夾內之檔不得被當成輸出檔回傳;第 1 層之輸出檔全數回傳。**該呼叫包在 `try/catch {}` 內**:列舉拋錯(如舊式數字之 `invalid opt`)會被吞掉而誤報為無輸出檔之 reject,故層數寫法須由測試守住 | `src/WDataMseed.mjs`(`fsTreeFolder` 呼叫處);`api-WDataMseedLevel` › `lists only the first level of the output folder…`(真 exe 轉檔,於輸出夾首次被列舉時注入 `sub/n1.csv`、`sub/deeper/n2.csv`,斷言回傳不含 `n1.csv`、`n2.csv`、`deeper`,第 1 層輸出檔與未注入之對照轉檔相同,且 `fs.readdirSync` 只讀輸出夾本身、不讀其子夾;僅 Windows) |
+
+判準:盤點指令之每一處第 2 參數皆為物件;`api-WDataMseedLevel` 全綠;植入「改回舊式數字／省略／`levelLimit: 2`／`null`／`0`／空物件」皆須轉紅(變異證據見 `sgud/exp/experience.md`)。站點全集:`src/WDataMseed.mjs` 1 站;根目錄範例 `g.mjs`、README、JSDoc 無此類呼叫。

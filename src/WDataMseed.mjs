@@ -213,10 +213,10 @@ async function WDataMseed(fp, opt = {}) {
             errTemp = err
         })
 
-    //fsTreeFolder
+    //fsTreeFolder, mseed2ascii之輸出檔平放於輸出夾下, 僅列舉第1層(wsemi 1.9.80起第2參數為opt, 未給levelLimit則窮舉全部層級)
     let rs = []
     try {
-        rs = fsTreeFolder(fdOut)
+        rs = fsTreeFolder(fdOut, { levelLimit: 1 })
         // console.log('rs(tree)', rs)
         rs = filter(rs, (v) => {
             return v.name !== fnIn
